@@ -2,7 +2,7 @@
 # For use with Joblet - https://github.com/joblet/joblet
 
 name: graalvmjdk-21
-version: 1.3.0
+version: 1.3.1
 description: GraalVM CE 21 with native-image for AOT compilation
 graalvm_version: 21.0.1
 java_version: 21.0.1
