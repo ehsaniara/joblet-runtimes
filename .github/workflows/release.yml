@@ -47,10 +47,33 @@ jobs:
           echo ""
           echo "All manifest.yaml files updated to version $VERSION"
 
-      - name: Build all runtimes
+      - name: Package runtimes (source files only)
         run: |
-          ./build/build-all.sh
-          echo "Built packages:"
+          VERSION=${{ steps.get_version.outputs.version }}
+          mkdir -p releases
+
+          echo "Packaging source files for all runtimes..."
+          for runtime_dir in runtimes/*/; do
+            runtime_name=$(basename "$runtime_dir")
+
+            if [ ! -f "$runtime_dir/manifest.yaml" ]; then
+              echo "Skipping $runtime_name (no manifest.yaml)"
+              continue
+            fi
+
+            echo "Packaging: $runtime_name"
+
+            # Package source files: manifest.yaml, setup scripts, etc.
+            # Archive contents will be at root level (no wrapper directory)
+            tar -czf "releases/${runtime_name}-${VERSION}.tar.gz" \
+                -C runtimes \
+                "${runtime_name}"
+
+            echo "  ✓ Created: ${runtime_name}-${VERSION}.tar.gz"
+          done
+
+          echo ""
+          echo "Packaged source files:"
           ls -lh releases/
 
       - name: Generate versions.lock for each runtime
