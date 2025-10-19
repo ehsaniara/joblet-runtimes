@@ -2,7 +2,7 @@
 # For use with Joblet - https://github.com/joblet/joblet
 
 name: python-3.11-pytorch-cuda
-version: 1.0.3
+version: 1.2.0
 description: PyTorch 2.1.0 + CUDA 11.8 for GPU deep learning
 python_version: 3.11.7
 cuda_version: 11.8.0

@@ -2,7 +2,7 @@
 # For use with Joblet - https://github.com/joblet/joblet
 
 name: openjdk-21
-version: 1.0.3
+version: 1.2.0
 description: OpenJDK 21 LTS with development tools
 java_version: 21.0.1
 

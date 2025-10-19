@@ -3,7 +3,7 @@
   "_generated_by": "GitHub Actions on git tag push",
   "_workflow": ".github/workflows/release.yml",
   "version": "1",
-  "updated_at": "2025-10-19T08:26:03Z",
+  "updated_at": "2025-10-19T09:23:39Z",
   "runtimes": {
     "graalvmjdk-21": {
       "1.0.2": {
@@ -27,6 +27,21 @@
         "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.3/graalvmjdk-21-1.0.3.tar.gz",
         "checksum": "sha256:a669ad77ca5b295505cf1f1a0f20eded082f221f69da74298c7bda0d8672a42d",
         "size": 5840,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.2.0": {
+        "version": "1.2.0",
+        "description": "GraalVM CE 21 with native-image for AOT compilation",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.2.0/graalvmjdk-21-1.2.0.tar.gz",
+        "checksum": "sha256:7f023049fff9e3e19e0eb83a1ab343c1db7f969f09f9c34c8ba0d02133866580",
+        "size": 5843,
         "platforms": [
           "ubuntu-amd64",
           "ubuntu-arm64",
@@ -67,6 +82,21 @@
           "amzn-amd64",
           "amzn-arm64"
         ]
+      },
+      "1.2.0": {
+        "version": "1.2.0",
+        "description": "OpenJDK 21 LTS with development tools",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.2.0/openjdk-21-1.2.0.tar.gz",
+        "checksum": "sha256:77bc24b3f9248467957a5a3409a2734a860a28b0e25d7a83ab072ac8ddfd8f87",
+        "size": 9158,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
       }
     },
     "python-3.11": {
@@ -91,6 +121,21 @@
         "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.3/python-3.11-1.0.3.tar.gz",
         "checksum": "sha256:eaab36cb7add94f2167ef875275146424c30137942d682b4231d3ec3fe2b5ef4",
         "size": 5370,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.2.0": {
+        "version": "1.2.0",
+        "description": "Basic Python 3.11 runtime",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.2.0/python-3.11-1.2.0.tar.gz",
+        "checksum": "sha256:950a5d1e0d9441c3c94870bb4a6d8e33a35365ac8ffc0a49b538e0566a3aae0a",
+        "size": 5372,
         "platforms": [
           "ubuntu-amd64",
           "ubuntu-arm64",
@@ -131,6 +176,21 @@
           "amzn-amd64",
           "amzn-arm64"
         ]
+      },
+      "1.2.0": {
+        "version": "1.2.0",
+        "description": "Python 3.11 with ML libraries (NumPy, Pandas, Scikit-learn)",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.2.0/python-3.11-ml-1.2.0.tar.gz",
+        "checksum": "sha256:b3ab4708a4994e118b1b257f4b7cfcca035f2a956b433b020177a44fc9fd566e",
+        "size": 11658,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
       }
     },
     "python-3.11-pytorch-cuda": {
@@ -155,6 +215,21 @@
         "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.3/python-3.11-pytorch-cuda-1.0.3.tar.gz",
         "checksum": "sha256:fbbfe762f4cca0a059b85e46bd94db98dc4e30c28697b59ec9f7762319fd85dd",
         "size": 8442,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.2.0": {
+        "version": "1.2.0",
+        "description": "PyTorch 2.1.0 + CUDA 11.8 for GPU deep learning",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.2.0/python-3.11-pytorch-cuda-1.2.0.tar.gz",
+        "checksum": "sha256:e117231b112cb21209a8f4297fa150395875be0d4243b585659652e01a6169b9",
+        "size": 8440,
         "platforms": [
           "ubuntu-amd64",
           "ubuntu-arm64",

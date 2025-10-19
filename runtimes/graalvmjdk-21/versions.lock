@@ -3,12 +3,12 @@
 # This file captures the EXACT versions installed during build
 #
 # Runtime: graalvmjdk-21
-# Generated: 2025-10-19 08:25:57 UTC
+# Generated: 2025-10-19 09:23:28 UTC
 # Build Platform: Linux x86_64
 
 metadata:
   runtime: graalvmjdk-21
-  generated: 2025-10-19T08:25:57Z
+  generated: 2025-10-19T09:23:28Z
   build_platform: Linux-x86_64
 
 # Java runtime version
