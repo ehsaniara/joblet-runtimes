@@ -3,12 +3,12 @@
 # This file captures the EXACT versions installed during build
 #
 # Runtime: openjdk-21
-# Generated: 2025-10-19 09:23:30 UTC
+# Generated: 2025-10-19 16:31:09 UTC
 # Build Platform: Linux x86_64
 
 metadata:
   runtime: openjdk-21
-  generated: 2025-10-19T09:23:30Z
+  generated: 2025-10-19T16:31:09Z
   build_platform: Linux-x86_64
 
 # Java runtime version

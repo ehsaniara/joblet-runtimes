@@ -2,7 +2,7 @@
 # For use with Joblet - https://github.com/joblet/joblet
 
 name: python-3.11
-version: 1.2.0
+version: 1.2.1
 description: Basic Python 3.11 runtime
 python_version: 3.11.7
 
