@@ -3,7 +3,7 @@
   "_generated_by": "GitHub Actions on git tag push",
   "_workflow": ".github/workflows/release.yml",
   "version": "1",
-  "updated_at": "2025-10-19T16:31:14Z",
+  "updated_at": "2025-10-19T17:50:05Z",
   "runtimes": {
     "graalvmjdk-21": {
       "1.0.2": {
@@ -57,6 +57,21 @@
         "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.2.1/graalvmjdk-21-1.2.1.tar.gz",
         "checksum": "sha256:7a193565222d38b658c50a7c1bd9f3dda2bda53f96ddc465b1fa06b26c794837",
         "size": 292456582,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.3.0": {
+        "version": "1.3.0",
+        "description": "GraalVM CE 21 with native-image for AOT compilation",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.3.0/graalvmjdk-21-1.3.0.tar.gz",
+        "checksum": "sha256:6320b7f2c7f154cce5a89103d65fc023fcbc5f42398d8457fd4715892396da00",
+        "size": 292457596,
         "platforms": [
           "ubuntu-amd64",
           "ubuntu-arm64",
@@ -127,6 +142,21 @@
           "amzn-amd64",
           "amzn-arm64"
         ]
+      },
+      "1.3.0": {
+        "version": "1.3.0",
+        "description": "OpenJDK 21 LTS with development tools",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.3.0/openjdk-21-1.3.0.tar.gz",
+        "checksum": "sha256:5ea8d65222f7565f37002283793209ba82408f05573f0a5000c813f3e4347bd3",
+        "size": 218451551,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
       }
     },
     "python-3.11": {
@@ -181,6 +211,21 @@
         "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.2.1/python-3.11-1.2.1.tar.gz",
         "checksum": "sha256:dc76400454b69875209aa174d41770976e74e9edff31a4bce0b99c7349e65079",
         "size": 21997137,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.3.0": {
+        "version": "1.3.0",
+        "description": "Basic Python 3.11 runtime",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.3.0/python-3.11-1.3.0.tar.gz",
+        "checksum": "sha256:f1d452daadf80fce4132284ca5091bb55bb0d3885879b5498fa7338b7d72e8d3",
+        "size": 21997152,
         "platforms": [
           "ubuntu-amd64",
           "ubuntu-arm64",
