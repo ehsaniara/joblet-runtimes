@@ -1,0 +1,244 @@
+name: Build and Release Runtimes
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get tag version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Update manifest.yaml versions
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          echo "Updating all manifest.yaml files to version: $VERSION"
+
+          for manifest in runtimes/*/manifest.yaml; do
+            if [ -f "$manifest" ]; then
+              runtime_name=$(dirname "$manifest" | xargs basename)
+              echo "  Updating: $runtime_name"
+
+              # Update version field in manifest.yaml
+              sed -i "s/^version: .*/version: $VERSION/" "$manifest"
+
+              # Verify the update
+              NEW_VERSION=$(grep "^version:" "$manifest" | awk '{print $2}' | tr -d '"')
+              echo "    ✓ Version updated to: $NEW_VERSION"
+            fi
+          done
+
+          echo ""
+          echo "All manifest.yaml files updated to version $VERSION"
+
+      - name: Build all runtimes
+        run: |
+          ./build/build-all.sh
+          echo "Built packages:"
+          ls -lh releases/
+
+      - name: Generate versions.lock for each runtime
+        run: |
+          echo "Generating versions.lock files..."
+          for runtime_dir in runtimes/*/; do
+            runtime_name=$(basename "$runtime_dir")
+            if [ -f "$runtime_dir/manifest.yaml" ]; then
+              echo "Generating versions.lock for $runtime_name"
+              ./scripts/generate-versions-lock.sh "$runtime_name"
+            fi
+          done
+
+          echo ""
+          echo "Generated versions.lock files:"
+          find runtimes -name "versions.lock" -exec echo "  {}" \;
+
+      - name: Generate registry.json
+        run: |
+          # Install PyYAML first
+          pip install pyyaml
+
+          # Run the generation script
+          python3 -c "$(cat << 'SCRIPT'
+          import json
+          import os
+          import hashlib
+          from datetime import datetime
+          from pathlib import Path
+          import yaml
+
+          runtimes_dir = Path('runtimes')
+          releases_dir = Path('releases')
+
+          # Try to load existing registry.json to preserve previous versions
+          existing_registry = {'runtimes': {}}
+          if Path('registry.json').exists():
+              try:
+                  with open('registry.json') as f:
+                      existing_registry = json.load(f)
+                  print(f'Loaded existing registry with {len(existing_registry.get("runtimes", {}))} runtimes')
+              except Exception as e:
+                  print(f'Could not load existing registry: {e}')
+                  print('Starting with empty registry')
+
+          # Create new registry with multi-version format
+          registry = {
+              '_comment': 'AUTO-GENERATED FILE - DO NOT EDIT MANUALLY',
+              '_generated_by': 'GitHub Actions on git tag push',
+              '_workflow': '.github/workflows/release.yml',
+              'version': '1',
+              'updated_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+              'runtimes': {}
+          }
+
+          # Preserve existing versions from old registry
+          # Handle both old format (single version) and new format (multi-version)
+          for runtime_name, runtime_data in existing_registry.get('runtimes', {}).items():
+              if isinstance(runtime_data, dict):
+                  # Check if this is old format (has 'version' key directly)
+                  if 'version' in runtime_data and 'download_url' in runtime_data:
+                      # Old format - convert to multi-version
+                      version = runtime_data['version']
+                      registry['runtimes'][runtime_name] = {
+                          version: runtime_data
+                      }
+                      print(f'Converted {runtime_name} from old format (version {version})')
+                  else:
+                      # New format - already multi-version
+                      registry['runtimes'][runtime_name] = runtime_data
+                      print(f'Preserved {runtime_name} with {len(runtime_data)} versions')
+
+          # Add/update current release versions
+          for runtime_dir in sorted(runtimes_dir.iterdir()):
+              if not runtime_dir.is_dir():
+                  continue
+
+              manifest_file = runtime_dir / 'manifest.yaml'
+              if not manifest_file.exists():
+                  continue
+
+              with open(manifest_file) as f:
+                  manifest = yaml.safe_load(f)
+
+              runtime_name = manifest['name']
+              version = manifest['version']
+              archive_name = f'{runtime_name}-{version}.tar.gz'
+              archive_path = releases_dir / archive_name
+
+              if not archive_path.exists():
+                  print(f'Warning: {archive_path} not found, skipping')
+                  continue
+
+              # Calculate checksum
+              sha256 = hashlib.sha256()
+              with open(archive_path, 'rb') as f:
+                  for chunk in iter(lambda: f.read(4096), b''):
+                      sha256.update(chunk)
+              checksum = sha256.hexdigest()
+
+              # Get file size
+              file_size = os.path.getsize(archive_path)
+
+              # Initialize runtime entry if doesn't exist
+              if runtime_name not in registry['runtimes']:
+                  registry['runtimes'][runtime_name] = {}
+
+              # Add this version (multi-version nested format)
+              registry['runtimes'][runtime_name][version] = {
+                  'version': version,
+                  'description': manifest.get('description', ''),
+                  'download_url': f'https://github.com/ehsaniara/joblet-runtimes/releases/download/${{ steps.get_version.outputs.tag }}/{archive_name}',
+                  'checksum': f'sha256:{checksum}',
+                  'size': file_size,
+                  'platforms': manifest.get('platforms', [])
+              }
+
+              print(f'Added {runtime_name} version {version} ({file_size} bytes)')
+
+          with open('registry.json', 'w') as f:
+              json.dump(registry, f, indent=2)
+
+          total_versions = sum(len(versions) for versions in registry['runtimes'].values())
+          print(f'Generated registry.json with {len(registry["runtimes"])} runtimes and {total_versions} total versions')
+          SCRIPT
+          )"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: releases/*.tar.gz
+          body: |
+            # Joblet Runtime Registry ${{ steps.get_version.outputs.tag }}
+
+            ## Runtimes Included
+
+            Run `rnx runtime install <runtime>@${{ steps.get_version.outputs.version }}` to install:
+
+            - `python-3.11-pytorch-cuda@${{ steps.get_version.outputs.version }}` - PyTorch + CUDA
+            - `python-3.11-ml@${{ steps.get_version.outputs.version }}` - NumPy, Pandas, Scikit-learn
+            - `python-3.11@${{ steps.get_version.outputs.version }}` - Basic Python
+            - `openjdk-21@${{ steps.get_version.outputs.version }}` - OpenJDK 21 LTS
+            - `graalvmjdk-21@${{ steps.get_version.outputs.version }}` - GraalVM + native-image
+
+            See [registry.json](https://github.com/joblet/joblet-runtimes/blob/main/registry.json) for checksums and download URLs.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit generated and updated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add generated and updated files
+          git add runtimes/*/manifest.yaml
+          git add registry.json
+          git add runtimes/*/versions.lock
+
+          # Commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "$(cat <<'EOF'
+          Release ${{ steps.get_version.outputs.tag }}: Auto-update versions and generate artifacts
+
+          Updated files:
+          - runtimes/*/manifest.yaml (version bumped to ${{ steps.get_version.outputs.version }})
+
+          Generated files:
+          - registry.json (with checksums and download URLs)
+          - versions.lock files (actual installed package versions)
+
+          This ensures version consistency and reproducible builds.
+          EOF
+          )"
+            git push origin HEAD:main
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.get_version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Runtimes:** $(ls releases/*.tar.gz | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Built Packages" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ls -lh releases/*.tar.gz >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

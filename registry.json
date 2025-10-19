@@ -1,0 +1,169 @@
+{
+  "_comment": "AUTO-GENERATED FILE - DO NOT EDIT MANUALLY",
+  "_generated_by": "GitHub Actions on git tag push",
+  "_workflow": ".github/workflows/release.yml",
+  "version": "1",
+  "updated_at": "2025-10-19T08:26:03Z",
+  "runtimes": {
+    "graalvmjdk-21": {
+      "1.0.2": {
+        "version": "1.0.2",
+        "description": "GraalVM CE 21 with native-image for AOT compilation",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.2/graalvmjdk-21-1.0.2.tar.gz",
+        "checksum": "sha256:302f5dd9ce97291310a4fac15c69d0b106659d29de58a34a1ada9b184f0debbf",
+        "size": 0,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.0.3": {
+        "version": "1.0.3",
+        "description": "GraalVM CE 21 with native-image for AOT compilation",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.3/graalvmjdk-21-1.0.3.tar.gz",
+        "checksum": "sha256:a669ad77ca5b295505cf1f1a0f20eded082f221f69da74298c7bda0d8672a42d",
+        "size": 5840,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      }
+    },
+    "openjdk-21": {
+      "1.0.2": {
+        "version": "1.0.2",
+        "description": "OpenJDK 21 LTS with development tools",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.2/openjdk-21-1.0.2.tar.gz",
+        "checksum": "sha256:4149a2df2eb52ceb3aa2035f3c88b4c6168828268e274a1eb6b56aaca02502ca",
+        "size": 0,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.0.3": {
+        "version": "1.0.3",
+        "description": "OpenJDK 21 LTS with development tools",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.3/openjdk-21-1.0.3.tar.gz",
+        "checksum": "sha256:8856647aa40275908187ea2f872f700a3aac09478bc82bf12530d2b989a9c856",
+        "size": 9155,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      }
+    },
+    "python-3.11": {
+      "1.0.2": {
+        "version": "1.0.2",
+        "description": "Basic Python 3.11 runtime",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.2/python-3.11-1.0.2.tar.gz",
+        "checksum": "sha256:8d93af1c3ff67e74014ee07683ceeb4e878923f302a26f78dc3de250cb9e8c05",
+        "size": 0,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.0.3": {
+        "version": "1.0.3",
+        "description": "Basic Python 3.11 runtime",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.3/python-3.11-1.0.3.tar.gz",
+        "checksum": "sha256:eaab36cb7add94f2167ef875275146424c30137942d682b4231d3ec3fe2b5ef4",
+        "size": 5370,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      }
+    },
+    "python-3.11-ml": {
+      "1.0.2": {
+        "version": "1.0.2",
+        "description": "Python 3.11 with ML libraries (NumPy, Pandas, Scikit-learn)",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.2/python-3.11-ml-1.0.2.tar.gz",
+        "checksum": "sha256:c8e67cc38e31675a4f42e91be8cc0f92559e5498ffd9e657b7cac624debe87eb",
+        "size": 0,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.0.3": {
+        "version": "1.0.3",
+        "description": "Python 3.11 with ML libraries (NumPy, Pandas, Scikit-learn)",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.3/python-3.11-ml-1.0.3.tar.gz",
+        "checksum": "sha256:44e21a72f9791775792ba696e7146397f9a4141573fcc8d2ed4589e64e411ad6",
+        "size": 11660,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      }
+    },
+    "python-3.11-pytorch-cuda": {
+      "1.0.2": {
+        "version": "1.0.2",
+        "description": "PyTorch 2.1.0 + CUDA 11.8 for GPU deep learning",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.2/python-3.11-pytorch-cuda-1.0.2.tar.gz",
+        "checksum": "sha256:8b43f4ad4f38ace558774da9e1ce0f587c954d736cffe578d58a770f0138b890",
+        "size": 0,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.0.3": {
+        "version": "1.0.3",
+        "description": "PyTorch 2.1.0 + CUDA 11.8 for GPU deep learning",
+        "download_url": "https://github.com/joblet/joblet-runtimes/releases/download/v1.0.3/python-3.11-pytorch-cuda-1.0.3.tar.gz",
+        "checksum": "sha256:fbbfe762f4cca0a059b85e46bd94db98dc4e30c28697b59ec9f7762319fd85dd",
+        "size": 8442,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      }
+    }
+  }
+}

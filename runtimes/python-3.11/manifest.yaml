@@ -1,0 +1,21 @@
+# Joblet Runtime: python-3.11
+# For use with Joblet - https://github.com/joblet/joblet
+
+name: python-3.11
+version: 1.0.3
+description: Basic Python 3.11 runtime
+python_version: 3.11.7
+
+platforms:
+  - ubuntu-amd64
+  - ubuntu-arm64
+  - rhel-amd64
+  - rhel-arm64
+  - amzn-amd64
+  - amzn-arm64
+
+# Minimal packages
+packages:
+  - pip==23.3.1
+  - setuptools==69.0.2
+  - wheel==0.42.0

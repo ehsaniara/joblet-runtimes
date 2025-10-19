@@ -1,0 +1,22 @@
+# Joblet Runtime: openjdk-21
+# For use with Joblet - https://github.com/joblet/joblet
+
+name: openjdk-21
+version: 1.0.3
+description: OpenJDK 21 LTS with development tools
+java_version: 21.0.1
+
+platforms:
+  - ubuntu-amd64
+  - ubuntu-arm64
+  - rhel-amd64
+  - rhel-arm64
+  - amzn-amd64
+  - amzn-arm64
+
+# Java LTS 21 features
+features:
+  - Virtual Threads
+  - Pattern Matching
+  - Record Patterns
+  - Sequenced Collections
