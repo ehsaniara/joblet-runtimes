@@ -226,7 +226,7 @@ generate_runtime_yml() {
     # Generate design-compliant runtime.yml (per builder-runtime-final.md)
     cat > "$RUNTIME_YML" << EOF
 name: openjdk-21
-version: "$java_version"
+version: "${RUNTIME_VERSION:-21}"
 description: "OpenJDK 21 - self-contained ($file_count files)"
 
 # All mounts from isolated/ - no host dependencies per design

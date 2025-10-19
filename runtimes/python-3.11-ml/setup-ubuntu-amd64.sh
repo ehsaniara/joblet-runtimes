@@ -22,7 +22,7 @@ trap 'handle_error ${LINENO}' ERR
 # CONFIGURATION
 # =============================================================================
 
-RUNTIME_NAME="${RUNTIME_SPEC:-python-3.11-ml}"
+RUNTIME_NAME="${RUNTIME_NAME:-python-3.11-ml}"
 RUNTIME_BASE_DIR="/opt/joblet/runtimes/$RUNTIME_NAME"
 ISOLATED_DIR="$RUNTIME_BASE_DIR/isolated"
 
@@ -543,7 +543,7 @@ EOF
     # Runtime configuration
     cat > "$RUNTIME_BASE_DIR/runtime.yml" << EOF
 name: $RUNTIME_NAME
-version: "3.11"
+version: "${RUNTIME_VERSION:-3.11}"
 description: "Python 3.11 with ML packages"
 
 mounts:

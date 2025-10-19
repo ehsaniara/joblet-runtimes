@@ -6,7 +6,7 @@ set -e
 set -u
 set -o pipefail
 
-RUNTIME_NAME="${RUNTIME_SPEC:-python-3.11}"
+RUNTIME_NAME="${RUNTIME_NAME:-python-3.11}"
 RUNTIME_BASE_DIR="/opt/joblet/runtimes/$RUNTIME_NAME"
 ISOLATED_DIR="$RUNTIME_BASE_DIR/isolated"
 
@@ -152,7 +152,7 @@ EOF
 pythonpath="/usr/local/lib/python3.11/site-packages:/usr/lib/python$python_version/site-packages"
 cat > "$RUNTIME_BASE_DIR/runtime.yml" << EOF
 name: $RUNTIME_NAME
-version: "3.11"
+version: "${RUNTIME_VERSION:-3.11}"
 description: "Basic Python runtime with essential packages"
 type: "language-runtime"
 

@@ -75,6 +75,13 @@ for runtime in "${RUNTIMES[@]}"; do
         continue
     fi
 
+    # Validate runtime name format: lowercase, numbers, hyphens, dots only
+    if ! echo "$runtime" | grep -qE '^[a-z0-9][a-z0-9\.\-]*$'; then
+        log_error "Invalid runtime name: $runtime"
+        log_error "Runtime names must be lowercase and contain only letters, numbers, hyphens, and dots"
+        continue
+    fi
+
     cd "$RUNTIMES_DIR/$runtime"
 
     # Read version from manifest.yaml
@@ -91,6 +98,7 @@ for runtime in "${RUNTIMES[@]}"; do
 
     # Set environment variables for the build
     export RUNTIME_NAME="$runtime"
+    export RUNTIME_VERSION="$VERSION"
     export BUILD_ID="local-build-$(date +%s)"
     export RUNTIME_SPEC="${runtime}@${VERSION}"
 
@@ -104,7 +112,8 @@ for runtime in "${RUNTIMES[@]}"; do
     # Run the setup script to build the runtime
     if [ -f "setup.sh" ]; then
         log_info "Executing: ./setup.sh"
-        if sudo bash setup.sh; then
+        # Use sudo -E to preserve environment variables (RUNTIME_VERSION, etc.)
+        if sudo -E bash setup.sh; then
             log_success "Runtime built successfully"
         else
             log_error "Failed to run setup script for: $runtime"

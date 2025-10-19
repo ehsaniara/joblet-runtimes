@@ -201,7 +201,7 @@ generate_runtime_config() {
     
     cat > "$RUNTIME_YML" << 'EOF'
 name: graalvmjdk-21
-version: "21.0.1"
+version: "${RUNTIME_VERSION:-21.0.1}"
 description: "GraalVM Community Edition JDK 21 Runtime (RHEL/CentOS)"
 
 # All mounts from isolated/ - no host dependencies per design

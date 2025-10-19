@@ -194,7 +194,7 @@ generate_runtime_yml() {
     echo "Creating design-compliant runtime.yml for OpenJDK..."
         cat > "$RUNTIME_YML" << EOF
 name: openjdk-21
-version: "$java_version"
+version: "${RUNTIME_VERSION:-21}"
 description: "OpenJDK - self-contained ($file_count files)"
 
 # All mounts from isolated/ - no host dependencies per design
