@@ -86,16 +86,75 @@ for runtime in "${RUNTIMES[@]}"; do
         VERSION="1.0.0"
     fi
 
-    # Create archive
+    # Build the runtime by running the setup script
+    log_info "Running setup script to build runtime..."
+
+    # Set environment variables for the build
+    export RUNTIME_NAME="$runtime"
+    export BUILD_ID="local-build-$(date +%s)"
+    export RUNTIME_SPEC="${runtime}@${VERSION}"
+
+    # Setup scripts install to flat structure: /opt/joblet/runtimes/<name>/
+    TEMP_BUILT_DIR="/opt/joblet/runtimes/$runtime"
+    if [ -d "$TEMP_BUILT_DIR" ]; then
+        log_info "Cleaning existing runtime: $TEMP_BUILT_DIR"
+        sudo rm -rf "$TEMP_BUILT_DIR"
+    fi
+
+    # Run the setup script to build the runtime
+    if [ -f "setup.sh" ]; then
+        log_info "Executing: ./setup.sh"
+        if sudo bash setup.sh; then
+            log_success "Runtime built successfully"
+        else
+            log_error "Failed to run setup script for: $runtime"
+            continue
+        fi
+    else
+        log_error "No setup.sh found for: $runtime"
+        continue
+    fi
+
+    # Verify the built runtime exists
+    if [ ! -d "$TEMP_BUILT_DIR" ]; then
+        log_error "Built runtime not found at: $TEMP_BUILT_DIR"
+        continue
+    fi
+
+    # Verify runtime.yml exists
+    if [ ! -f "$TEMP_BUILT_DIR/runtime.yml" ]; then
+        log_error "runtime.yml not found in built runtime"
+        continue
+    fi
+
+    log_success "Runtime validation passed"
+
+    # Move to nested version structure: /opt/joblet/runtimes/<name>/<version>/
+    # Use temporary location to avoid moving directory into itself
+    NESTED_RUNTIME_DIR="/opt/joblet/runtimes/$runtime/$VERSION"
+    TEMP_MOVE_DIR="/tmp/joblet-build-$runtime-$$"
+    log_info "Moving to nested structure: $NESTED_RUNTIME_DIR"
+
+    sudo mv "$TEMP_BUILT_DIR" "$TEMP_MOVE_DIR"
+    sudo mkdir -p "/opt/joblet/runtimes/$runtime"
+    sudo mv "$TEMP_MOVE_DIR" "$NESTED_RUNTIME_DIR"
+
+    # Create archive from the nested BUILT runtime
     ARCHIVE_NAME="${runtime}-${VERSION}.tar.gz"
     ARCHIVE_PATH="$OUTPUT_DIR/$ARCHIVE_NAME"
 
-    log_info "Creating archive: $ARCHIVE_NAME"
-    tar --exclude=".git" \
-        --exclude=".idea" \
-        --exclude="__pycache__" \
+    log_info "Creating archive from built runtime: $ARCHIVE_NAME"
+
+    # Package the CONTENTS of the version directory (no wrapper directory)
+    # Archive will contain: runtime.yml, isolated/, etc. (at root level)
+    # When extracted to /opt/joblet/runtimes/<name>/<version>, creates correct structure
+    sudo tar --exclude="__pycache__" \
         --exclude="*.pyc" \
-        -czf "$ARCHIVE_PATH" -C "$RUNTIMES_DIR" "$runtime"
+        --exclude="*.pyo" \
+        -czf "$ARCHIVE_PATH" -C "$NESTED_RUNTIME_DIR" .
+
+    # Fix ownership of the archive
+    sudo chown $(whoami):$(whoami) "$ARCHIVE_PATH"
 
     if [ $? -eq 0 ]; then
         ARCHIVE_SIZE=$(ls -lh "$ARCHIVE_PATH" | awk '{print $5}')
@@ -106,8 +165,12 @@ for runtime in "${RUNTIMES[@]}"; do
 
         # Save checksum
         echo "$CHECKSUM  $ARCHIVE_NAME" > "$ARCHIVE_PATH.sha256"
+
+        # Clean up the built runtime to save space
+        log_info "Cleaning up built runtime: $NESTED_RUNTIME_DIR"
+        sudo rm -rf "/opt/joblet/runtimes/$runtime"
     else
-        log_error "Failed to build: $runtime"
+        log_error "Failed to create archive for: $runtime"
     fi
 
     echo ""
