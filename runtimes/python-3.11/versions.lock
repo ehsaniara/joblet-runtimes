@@ -3,12 +3,12 @@
 # This file captures the EXACT versions installed during build
 #
 # Runtime: python-3.11
-# Generated: 2025-10-19 18:08:41 UTC
+# Generated: 2025-10-20 23:54:04 UTC
 # Build Platform: Linux x86_64
 
 metadata:
   runtime: python-3.11
-  generated: 2025-10-19T18:08:41Z
+  generated: 2025-10-20T23:54:04Z
   build_platform: Linux-x86_64
 
 # Python packages with exact versions
@@ -38,7 +38,7 @@ python_packages:
   - name: click
     version: "=8.1.6"
   - name: cloud-init
-    version: "=25.2"
+    version: "=25.1.4"
   - name: colorama
     version: "=0.4.6"
   - name: command-not-found
@@ -98,9 +98,9 @@ python_packages:
   - name: pexpect
     version: "=4.9.0"
   - name: pipx
-    version: "=1.8.0"
+    version: "=1.7.1"
   - name: platformdirs
-    version: "=4.5.0"
+    version: "=4.4.0"
   - name: ptyprocess
     version: "=0.7.0"
   - name: pyasn1
@@ -182,7 +182,7 @@ python_packages:
 system:
   os: Linux
   arch: x86_64
-  kernel: 6.14.0-1012-azure
+  kernel: 6.11.0-1018-azure
 
 # Build verification
 build:

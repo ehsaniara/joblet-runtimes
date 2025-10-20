@@ -3,7 +3,7 @@
   "_generated_by": "GitHub Actions on runtime-specific tag push",
   "_workflow": ".github/workflows/release-runtime.yml",
   "version": "1",
-  "updated_at": "2025-10-20T23:51:43Z",
+  "updated_at": "2025-10-20T23:54:11Z",
   "runtimes": {
     "graalvmjdk-21": {
       "1.3.1": {
@@ -43,9 +43,9 @@
       "1.3.1": {
         "version": "1.3.1",
         "description": "Basic Python 3.11 runtime",
-        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.3.1/python-3.11-1.3.1.tar.gz",
-        "checksum": "sha256:8c3877a50523efe6ff4a7526c340e015ebad2f9e03780ab7e917ee9e93683959",
-        "size": 5732,
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/python-3.11@1.3.1/python-3.11-1.3.1.tar.gz",
+        "checksum": "sha256:017d6fca0e125a62c298821cd28075c4e8f402f3dab55dbeb0e8d2a35672463e",
+        "size": 5353,
         "platforms": [
           "ubuntu-amd64",
           "ubuntu-arm64",
