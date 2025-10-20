@@ -3,12 +3,12 @@
 # This file captures the EXACT versions installed during build
 #
 # Runtime: openjdk-21
-# Generated: 2025-10-19 18:08:36 UTC
+# Generated: 2025-10-20 23:48:54 UTC
 # Build Platform: Linux x86_64
 
 metadata:
   runtime: openjdk-21
-  generated: 2025-10-19T18:08:36Z
+  generated: 2025-10-20T23:48:54Z
   build_platform: Linux-x86_64
 
 # Java runtime version
@@ -20,7 +20,7 @@ java:
 system:
   os: Linux
   arch: x86_64
-  kernel: 6.14.0-1012-azure
+  kernel: 6.11.0-1018-azure
 
 # Build verification
 build:

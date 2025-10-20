@@ -1,9 +1,9 @@
 {
   "_comment": "AUTO-GENERATED FILE - DO NOT EDIT MANUALLY",
-  "_generated_by": "GitHub Actions on git tag push",
-  "_workflow": ".github/workflows/release.yml",
+  "_generated_by": "GitHub Actions on runtime-specific tag push",
+  "_workflow": ".github/workflows/release-runtime.yml",
   "version": "1",
-  "updated_at": "2025-10-20T23:35:30Z",
+  "updated_at": "2025-10-20T23:48:59Z",
   "runtimes": {
     "graalvmjdk-21": {
       "1.3.1": {
@@ -26,9 +26,9 @@
       "1.3.1": {
         "version": "1.3.1",
         "description": "OpenJDK 21 LTS with development tools",
-        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/v1.3.1/openjdk-21-1.3.1.tar.gz",
-        "checksum": "sha256:d8e7166f7218cbb708ef6893ea7c953a9b56e1c614a1d0a434f50c2902ea2038",
-        "size": 9176,
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/openjdk-21@1.3.1/openjdk-21-1.3.1.tar.gz",
+        "checksum": "sha256:2bee0c015587e8f410689db9027ce091e20b28f18c939a946f88adcb59e33fc8",
+        "size": 9927,
         "platforms": [
           "ubuntu-amd64",
           "ubuntu-arm64",
