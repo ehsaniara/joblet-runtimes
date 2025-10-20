@@ -1,0 +1,353 @@
+name: Release Individual Runtime
+
+on:
+  push:
+    tags:
+      - '*@*.*.*'  # Triggers on runtime-specific tags like python-3.11-ml@1.3.2
+
+permissions:
+  contents: write
+
+jobs:
+  release-runtime:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse runtime tag
+        id: parse_tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "Full tag: $TAG"
+
+          # Parse runtime@version format
+          if [[ ! "$TAG" =~ ^(.+)@([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "Error: Tag must be in format <runtime-name>@<version> (e.g., python-3.11-ml@1.3.2)"
+            exit 1
+          fi
+
+          RUNTIME_NAME="${BASH_REMATCH[1]}"
+          VERSION="${BASH_REMATCH[2]}"
+
+          echo "runtime_name=$RUNTIME_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+          echo "Parsed tag:"
+          echo "  Runtime: $RUNTIME_NAME"
+          echo "  Version: $VERSION"
+
+      - name: Validate naming conventions
+        run: |
+          RUNTIME_NAME="${{ steps.parse_tag.outputs.runtime_name }}"
+          VERSION="${{ steps.parse_tag.outputs.version }}"
+
+          echo "Validating naming conventions..."
+          echo "  Runtime name: $RUNTIME_NAME"
+          echo "  Version: $VERSION"
+          echo ""
+
+          # Validate runtime name: lowercase letters, numbers, dots, and hyphens only
+          if [[ ! "$RUNTIME_NAME" =~ ^[a-z0-9.-]+$ ]]; then
+            echo "❌ Error: Invalid runtime name: '$RUNTIME_NAME'"
+            echo ""
+            echo "Runtime name must:"
+            echo "  - Use only lowercase English letters (a-z)"
+            echo "  - Can include numbers (0-9)"
+            echo "  - Can include dots (.)"
+            echo "  - Can include hyphens (-)"
+            echo "  - No uppercase letters, underscores, or special characters"
+            echo ""
+            echo "Valid examples:"
+            echo "  ✓ python-3.11-ml"
+            echo "  ✓ openjdk-21"
+            echo "  ✓ python-3.11-pytorch-cuda"
+            echo "  ✓ graalvmjdk-21"
+            echo ""
+            echo "Invalid examples:"
+            echo "  ✗ Python-3.11-ML (uppercase)"
+            echo "  ✗ python_3.11_ml (underscores)"
+            echo "  ✗ python@3.11-ml (@ symbol)"
+            exit 1
+          fi
+
+          # Validate version: semver format (already validated by regex, but double-check)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: Invalid version format: '$VERSION'"
+            echo ""
+            echo "Version must follow semantic versioning:"
+            echo "  - Format: MAJOR.MINOR.PATCH"
+            echo "  - Only numbers and dots"
+            echo "  - Three parts required"
+            echo ""
+            echo "Valid examples:"
+            echo "  ✓ 1.0.0"
+            echo "  ✓ 1.3.2"
+            echo "  ✓ 2.0.0"
+            echo ""
+            echo "Invalid examples:"
+            echo "  ✗ 1.0 (missing patch)"
+            echo "  ✗ v1.0.0 (v prefix)"
+            echo "  ✗ 1.0.0-beta (pre-release suffix)"
+            exit 1
+          fi
+
+          echo "✓ Runtime name is valid: $RUNTIME_NAME"
+          echo "✓ Version format is valid: $VERSION"
+
+      - name: Verify runtime exists
+        run: |
+          RUNTIME_NAME="${{ steps.parse_tag.outputs.runtime_name }}"
+          RUNTIME_DIR="runtimes/$RUNTIME_NAME"
+
+          if [ ! -d "$RUNTIME_DIR" ]; then
+            echo "Error: Runtime directory '$RUNTIME_DIR' does not exist"
+            echo "Available runtimes:"
+            ls -1 runtimes/
+            exit 1
+          fi
+
+          if [ ! -f "$RUNTIME_DIR/manifest.yaml" ]; then
+            echo "Error: manifest.yaml not found in '$RUNTIME_DIR'"
+            exit 1
+          fi
+
+          echo "✓ Runtime directory exists: $RUNTIME_DIR"
+          echo "✓ manifest.yaml found"
+
+      - name: Verify manifest version matches tag
+        run: |
+          RUNTIME_NAME="${{ steps.parse_tag.outputs.runtime_name }}"
+          EXPECTED_VERSION="${{ steps.parse_tag.outputs.version }}"
+          MANIFEST_FILE="runtimes/$RUNTIME_NAME/manifest.yaml"
+
+          # Extract version from manifest.yaml
+          MANIFEST_VERSION=$(grep "^version:" "$MANIFEST_FILE" | awk '{print $2}' | tr -d '"' | tr -d "'")
+
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Manifest version: $MANIFEST_VERSION"
+
+          if [ "$MANIFEST_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "Error: Version mismatch!"
+            echo "  Tag specifies version: $EXPECTED_VERSION"
+            echo "  manifest.yaml has version: $MANIFEST_VERSION"
+            echo ""
+            echo "Please update manifest.yaml to version $EXPECTED_VERSION before tagging"
+            exit 1
+          fi
+
+          echo "✓ Version matches: $EXPECTED_VERSION"
+
+      - name: Package runtime
+        run: |
+          RUNTIME_NAME="${{ steps.parse_tag.outputs.runtime_name }}"
+          VERSION="${{ steps.parse_tag.outputs.version }}"
+
+          mkdir -p releases
+
+          echo "Packaging: $RUNTIME_NAME@$VERSION"
+
+          # Package source files: manifest.yaml, setup scripts, etc.
+          tar -czf "releases/${RUNTIME_NAME}-${VERSION}.tar.gz" \
+              -C runtimes \
+              "${RUNTIME_NAME}"
+
+          echo "✓ Created: ${RUNTIME_NAME}-${VERSION}.tar.gz"
+          ls -lh "releases/${RUNTIME_NAME}-${VERSION}.tar.gz"
+
+      - name: Generate versions.lock
+        run: |
+          RUNTIME_NAME="${{ steps.parse_tag.outputs.runtime_name }}"
+
+          if [ -f "./scripts/generate-versions-lock.sh" ]; then
+            echo "Generating versions.lock for $RUNTIME_NAME"
+            ./scripts/generate-versions-lock.sh "$RUNTIME_NAME"
+
+            if [ -f "runtimes/$RUNTIME_NAME/versions.lock" ]; then
+              echo "✓ Generated versions.lock"
+              cat "runtimes/$RUNTIME_NAME/versions.lock"
+            fi
+          else
+            echo "Warning: generate-versions-lock.sh not found, skipping"
+          fi
+
+      - name: Update registry.json
+        run: |
+          # Install PyYAML
+          pip install pyyaml
+
+          RUNTIME_NAME="${{ steps.parse_tag.outputs.runtime_name }}"
+          VERSION="${{ steps.parse_tag.outputs.version }}"
+          TAG="${{ steps.parse_tag.outputs.tag }}"
+
+          python3 << 'SCRIPT'
+          import json
+          import os
+          import hashlib
+          from datetime import datetime
+          from pathlib import Path
+          import yaml
+          import sys
+
+          runtime_name = os.environ['RUNTIME_NAME']
+          version = os.environ['VERSION']
+          tag = os.environ['TAG']
+
+          runtime_dir = Path('runtimes') / runtime_name
+          manifest_file = runtime_dir / 'manifest.yaml'
+          archive_name = f'{runtime_name}-{version}.tar.gz'
+          archive_path = Path('releases') / archive_name
+
+          # Load existing registry.json (from main branch)
+          existing_registry = {'runtimes': {}}
+          if Path('registry.json').exists():
+              try:
+                  with open('registry.json') as f:
+                      existing_registry = json.load(f)
+                  print(f'✓ Loaded existing registry with {len(existing_registry.get("runtimes", {}))} runtimes')
+              except Exception as e:
+                  print(f'Warning: Could not load existing registry: {e}')
+
+          # Create/update registry
+          registry = {
+              '_comment': 'AUTO-GENERATED FILE - DO NOT EDIT MANUALLY',
+              '_generated_by': 'GitHub Actions on runtime-specific tag push',
+              '_workflow': '.github/workflows/release-runtime.yml',
+              'version': '1',
+              'updated_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+              'runtimes': existing_registry.get('runtimes', {})
+          }
+
+          # Load manifest
+          with open(manifest_file) as f:
+              manifest = yaml.safe_load(f)
+
+          # Calculate checksum
+          sha256 = hashlib.sha256()
+          with open(archive_path, 'rb') as f:
+              for chunk in iter(lambda: f.read(4096), b''):
+                  sha256.update(chunk)
+          checksum = sha256.hexdigest()
+
+          # Get file size
+          file_size = os.path.getsize(archive_path)
+
+          # Initialize runtime entry if doesn't exist
+          if runtime_name not in registry['runtimes']:
+              registry['runtimes'][runtime_name] = {}
+
+          # Add/update this specific version
+          registry['runtimes'][runtime_name][version] = {
+              'version': version,
+              'description': manifest.get('description', ''),
+              'download_url': f'https://github.com/ehsaniara/joblet-runtimes/releases/download/{tag}/{archive_name}',
+              'checksum': f'sha256:{checksum}',
+              'size': file_size,
+              'platforms': manifest.get('platforms', [])
+          }
+
+          # Write updated registry
+          with open('registry.json', 'w') as f:
+              json.dump(registry, f, indent=2)
+
+          print(f'✓ Updated registry.json:')
+          print(f'  Runtime: {runtime_name}')
+          print(f'  Version: {version}')
+          print(f'  Size: {file_size:,} bytes')
+          print(f'  Checksum: sha256:{checksum[:16]}...')
+
+          total_versions = sum(len(versions) for versions in registry['runtimes'].values())
+          print(f'  Total runtimes: {len(registry["runtimes"])}')
+          print(f'  Total versions: {total_versions}')
+          SCRIPT
+        env:
+          RUNTIME_NAME: ${{ steps.parse_tag.outputs.runtime_name }}
+          VERSION: ${{ steps.parse_tag.outputs.version }}
+          TAG: ${{ steps.parse_tag.outputs.tag }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: releases/*.tar.gz
+          name: ${{ steps.parse_tag.outputs.runtime_name }} ${{ steps.parse_tag.outputs.version }}
+          body: |
+            # ${{ steps.parse_tag.outputs.runtime_name }} v${{ steps.parse_tag.outputs.version }}
+
+            Runtime release for **${{ steps.parse_tag.outputs.runtime_name }}** version **${{ steps.parse_tag.outputs.version }}**.
+
+            ## Installation
+
+            ```bash
+            rnx runtime install ${{ steps.parse_tag.outputs.runtime_name }}@${{ steps.parse_tag.outputs.version }}
+
+            # Or install as latest
+            rnx runtime install ${{ steps.parse_tag.outputs.runtime_name }}
+            ```
+
+            ## Package Details
+
+            - **File:** `${{ steps.parse_tag.outputs.runtime_name }}-${{ steps.parse_tag.outputs.version }}.tar.gz`
+            - **Checksum:** See [registry.json](https://github.com/ehsaniara/joblet-runtimes/blob/main/registry.json)
+
+            ## Registry
+
+            This release updates the registry with:
+            ```
+            ${{ steps.parse_tag.outputs.runtime_name }}:
+              ${{ steps.parse_tag.outputs.version }}: <new release>
+            ```
+
+            Previous versions of this runtime remain available in the registry.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit updated registry.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add registry.json and versions.lock
+          git add registry.json
+          git add "runtimes/${{ steps.parse_tag.outputs.runtime_name }}/versions.lock" 2>/dev/null || true
+
+          # Commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "$(cat <<'EOF'
+          Release ${{ steps.parse_tag.outputs.tag }}: Update registry
+
+          Updated registry.json with ${{ steps.parse_tag.outputs.runtime_name }} version ${{ steps.parse_tag.outputs.version }}
+
+          - Added/updated: ${{ steps.parse_tag.outputs.runtime_name }}@${{ steps.parse_tag.outputs.version }}
+          - Previous versions preserved
+          - Generated by: .github/workflows/release-runtime.yml
+          EOF
+          )"
+
+            git push origin HEAD:main
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Runtime:** ${{ steps.parse_tag.outputs.runtime_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.parse_tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.parse_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Package" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ls -lh releases/*.tar.gz >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "rnx runtime install ${{ steps.parse_tag.outputs.runtime_name }}@${{ steps.parse_tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
