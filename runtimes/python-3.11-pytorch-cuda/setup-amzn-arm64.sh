@@ -287,35 +287,113 @@ install_pytorch_packages() {
     echo "Installing PyTorch packages: ${pytorch_packages[*]}"
     echo "Installing ML packages: ${ml_packages[*]}"
 
-    # Update pip first
-    python3 -m pip install --upgrade pip --quiet 2>/dev/null || echo "  ⚠ Could not upgrade pip"
+    # Check DNS resolution in chroot
+    echo "Checking network connectivity..."
+    if ! ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+        echo "  ⚠ WARNING: No network connectivity detected"
+        echo "  ⚠ Package installation may fail"
+    else
+        echo "  ✓ Network connectivity OK"
+    fi
+
+    # Configure pip for better reliability
+    mkdir -p ~/.pip
+    cat > ~/.pip/pip.conf << 'PIPCONF'
+[global]
+timeout = 300
+retries = 3
+index-url = https://pypi.org/simple
+trusted-host = pypi.org
+               pypi.python.org
+               files.pythonhosted.org
+               download.pytorch.org
+PIPCONF
+
+    # Update pip first (with verbose output)
+    echo "Updating pip..."
+    python3 -m pip install --upgrade pip 2>&1 | grep -v "^Requirement already satisfied" || echo "  ⚠ Could not upgrade pip"
 
     local installed_packages=()
     local failed_packages=()
 
     # Install PyTorch with CUDA support
     # Using PyTorch index URL for CUDA 11.8
+    echo ""
+    echo "========================================="
     echo "Installing PyTorch with CUDA 11.8 support..."
-    if python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --quiet 2>/dev/null; then
-        installed_packages+=("torch" "torchvision" "torchaudio")
-        echo "  ✓ PyTorch with CUDA installed in system"
-    else
-        echo "  ⚠ PyTorch CUDA installation failed, trying CPU version..."
-        if python3 -m pip install torch torchvision torchaudio --quiet 2>/dev/null; then
+    echo "========================================="
+
+    # First attempt: CUDA version with verbose output
+    local pytorch_installed=false
+    echo "Attempt 1: Installing PyTorch with CUDA 11.8..."
+    if python3 -m pip install torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu118 \
+        --no-cache-dir \
+        --timeout=300 \
+        --retries=3 2>&1 | tee /tmp/pytorch_install.log; then
+
+        # Verify torch was actually installed
+        if python3 -c "import torch; print('PyTorch version:', torch.__version__)" 2>/dev/null; then
             installed_packages+=("torch" "torchvision" "torchaudio")
-            echo "  ✓ PyTorch (CPU) installed in system"
+            pytorch_installed=true
+            echo "  ✓ PyTorch with CUDA installed successfully"
         else
-            failed_packages+=("torch" "torchvision" "torchaudio")
-            echo "  ✗ Failed to install PyTorch"
+            echo "  ⚠ PyTorch install command succeeded but import failed"
+        fi
+    else
+        echo "  ⚠ PyTorch CUDA installation failed"
+        echo "  📄 Error log saved to /tmp/pytorch_install.log"
+        cat /tmp/pytorch_install.log | tail -20
+    fi
+
+    # Second attempt: CPU version if CUDA failed
+    if [ "$pytorch_installed" = false ]; then
+        echo ""
+        echo "Attempt 2: Installing PyTorch CPU version..."
+        if python3 -m pip install torch torchvision torchaudio \
+            --no-cache-dir \
+            --timeout=300 \
+            --retries=3 2>&1; then
+
+            if python3 -c "import torch; print('PyTorch version:', torch.__version__)" 2>/dev/null; then
+                installed_packages+=("torch" "torchvision" "torchaudio")
+                pytorch_installed=true
+                echo "  ✓ PyTorch (CPU) installed successfully"
+            else
+                echo "  ⚠ PyTorch CPU install command succeeded but import failed"
+            fi
+        else
+            echo "  ✗ PyTorch CPU installation also failed"
         fi
     fi
 
-    # Install additional ML packages
+    # If both attempts failed, add to failed packages
+    if [ "$pytorch_installed" = false ]; then
+        failed_packages+=("torch" "torchvision" "torchaudio")
+        echo "  ✗ All PyTorch installation attempts failed"
+    fi
+
+    # Install additional ML packages (one by one with error handling)
+    echo ""
+    echo "========================================="
+    echo "Installing ML packages..."
+    echo "========================================="
     for package in "${ml_packages[@]}"; do
         echo "Installing $package..."
-        if python3 -m pip install "$package" --quiet 2>/dev/null; then
-            installed_packages+=("$package")
-            echo "  ✓ $package installed in system"
+        if python3 -m pip install "$package" --no-cache-dir --timeout=180 2>&1 | grep -E "(Successfully installed|Requirement already satisfied)"; then
+            # Verify package can be imported
+            local pkg_import="${package}"
+            # Handle special import names
+            [ "$package" = "scikit-learn" ] && pkg_import="sklearn"
+            [ "$package" = "pillow" ] && pkg_import="PIL"
+
+            if python3 -c "import ${pkg_import}" 2>/dev/null; then
+                installed_packages+=("$package")
+                echo "  ✓ $package installed and verified"
+            else
+                failed_packages+=("$package")
+                echo "  ⚠ $package installed but import failed"
+            fi
         else
             failed_packages+=("$package")
             echo "  ✗ Failed to install $package"
@@ -324,13 +402,19 @@ install_pytorch_packages() {
 
     # Copy installed packages to isolated environment
     echo ""
+    echo "========================================="
     echo "Copying installed packages to isolated environment..."
+    echo "========================================="
 
     # Copy system site-packages
     for python_path in /usr/local/lib/python3*/dist-packages /usr/lib/python3/dist-packages /usr/local/lib/python3*/site-packages; do
         if [ -d "$python_path" ]; then
             echo "Copying from $python_path..."
-            cp -r "$python_path"/* "$site_packages/" 2>/dev/null || echo "  ⚠ Some files couldn't be copied from $python_path"
+            local copied_files=$(find "$python_path" -type f 2>/dev/null | wc -l)
+            if [ "$copied_files" -gt 0 ]; then
+                cp -r "$python_path"/* "$site_packages/" 2>/dev/null || echo "  ⚠ Some files couldn't be copied from $python_path"
+                echo "  ✓ Copied $copied_files files"
+            fi
         fi
     done
 
@@ -343,7 +427,9 @@ install_pytorch_packages() {
 
     # Report installation results
     echo ""
+    echo "========================================="
     echo "📊 PyTorch/ML Package Installation Results:"
+    echo "========================================="
     echo "  Successfully installed: ${#installed_packages[@]} packages"
     [ ${#installed_packages[@]} -gt 0 ] && echo "    ${installed_packages[*]}"
     echo "  Failed to install: ${#failed_packages[@]} packages"
@@ -353,7 +439,277 @@ install_pytorch_packages() {
     local final_files=$(find "$site_packages" -name "*.py" -type f 2>/dev/null | wc -l)
     echo "  Final Python files in isolated packages: $final_files"
 
+    # Verify PyTorch specifically
+    if [ -d "$site_packages/torch" ]; then
+        local torch_size=$(du -sh "$site_packages/torch" 2>/dev/null | cut -f1)
+        echo "  ✓ PyTorch package found in isolated env (size: $torch_size)"
+    else
+        echo "  ⚠ PyTorch package NOT found in isolated environment"
+    fi
+
     echo "✓ PyTorch/ML packages installation completed"
+}
+#!/bin/bash
+# Python 3.11 PyTorch CUDA Runtime Setup for Amazon Linux AMD64
+# Includes PyTorch with CUDA support for GPU acceleration
+
+set -e  # Exit on any error
+set -u  # Exit on undefined variables
+set -o pipefail  # Exit on pipe failures
+
+# Error handling function
+handle_error() {
+    local exit_code=$?
+    local line_number=$1
+    echo "❌ ERROR: Script failed at line $line_number with exit code $exit_code"
+    echo "❌ Installation FAILED - runtime may be in inconsistent state"
+    exit $exit_code
+}
+
+# Set up error trap
+trap 'handle_error ${LINENO}' ERR
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+RUNTIME_NAME="${RUNTIME_NAME:-python-3.11-pytorch-cuda}"
+RUNTIME_BASE_DIR="/opt/joblet/runtimes/$RUNTIME_NAME"
+ISOLATED_DIR="$RUNTIME_BASE_DIR/isolated"
+
+echo "Starting Python 3.11 PyTorch CUDA runtime setup..."
+echo "Platform: amzn-arm64"
+    echo "Note: ARM64 typically uses CPU-only PyTorch (or Jetson-specific builds for GPU)"
+echo "Runtime: $RUNTIME_NAME"
+echo "Installation path: $RUNTIME_BASE_DIR"
+
+# =============================================================================
+# SAFETY CHECKS - NO HOST CONTAMINATION
+# =============================================================================
+
+safety_check() {
+    echo "Performing safety checks to prevent host contamination..."
+
+    # Verify we're in a controlled environment
+    if [ "${JOBLET_CHROOT:-false}" != "true" ] && [ -z "${BUILD_ID:-}" ]; then
+        echo "⚠ WARNING: Not running in joblet build environment"
+        echo "This script should only run within joblet runtime installation"
+    fi
+
+    # Ensure target directory is within expected path
+    if [[ "$RUNTIME_BASE_DIR" != "/opt/joblet/runtimes/"* ]]; then
+        echo "✗ ERROR: Invalid runtime base directory: $RUNTIME_BASE_DIR"
+        exit 1
+    fi
+
+    echo "✓ Safety checks passed - no host contamination risk"
+}
+
+# =============================================================================
+# DIRECTORY SETUP
+# =============================================================================
+
+create_directories() {
+    echo "Creating runtime directories..."
+
+    mkdir -p "$RUNTIME_BASE_DIR"
+    cd "$RUNTIME_BASE_DIR"
+
+    # Create minimal isolated filesystem structure
+    local dirs=(
+        bin lib lib64 usr/bin usr/lib usr/local/lib/python3.11/dist-packages
+        opt/venv etc tmp proc lib/aarch64-linux-gnu usr/lib/aarch64-linux-gnu
+        usr/local/cuda/lib64 usr/local/cuda/bin
+    )
+
+    for dir in "${dirs[@]}"; do
+        mkdir -p "$ISOLATED_DIR/$dir"
+    done
+
+    echo "✓ Directories created"
+}
+
+# =============================================================================
+# SYSTEM FILES COPY
+# =============================================================================
+
+copy_system_files() {
+    echo "Copying system files..."
+
+    # Essential binaries
+    local binaries="bash sh ls cat cp mv rm mkdir chmod grep sed awk ps echo tar gzip curl wget python3 python3.10 python3.11 pip3 nvidia-smi"
+    local copied_binaries=()
+    local missing_binaries=()
+    local python_binary_copied=false
+
+    for bin in $binaries; do
+        local copied=false
+        for path in /bin /usr/bin /usr/local/bin; do
+            if [ -f "$path/$bin" ]; then
+                if cp -P "$path/$bin" "$ISOLATED_DIR/usr/bin/" 2>/dev/null; then
+                    copied_binaries+=("$bin")
+                    copied=true
+                    # Track if we copied any Python binary
+                    if [[ "$bin" =~ ^python ]]; then
+                        python_binary_copied=true
+                    fi
+                    break
+                fi
+            fi
+        done
+        if [ "$copied" = false ]; then
+            missing_binaries+=("$bin")
+        fi
+    done
+
+    # Report binary copying results
+    if [ ${#copied_binaries[@]} -gt 0 ]; then
+        echo "  ✓ Copied binaries: ${copied_binaries[*]}"
+    fi
+    if [ ${#missing_binaries[@]} -gt 0 ]; then
+        echo "  ⚠ Missing binaries: ${missing_binaries[*]}"
+    fi
+
+    # Critical check: ensure at least one Python binary was copied
+    if [ "$python_binary_copied" = false ]; then
+        echo "❌ CRITICAL: No Python binary was copied successfully"
+        echo "❌ This will result in a non-functional runtime"
+        exit 1
+    fi
+
+    # Essential libraries (including CUDA libraries)
+    local lib_patterns="libc.so* libdl.so* libpthread.so* libm.so* ld-linux*.so* libz.so* libssl.so* libcrypto.so* libffi.so* libexpat.so* libblas.so* liblapack.so* libopenblas.so* libgfortran.so* libgcc_s.so* libstdc++.so* libselinux.so* libresolv.so* libnss*.so* libpcre*.so* libcuda*.so* libnvidia*.so* libcudnn*.so* libcublas*.so* libcudart*.so* libcufft*.so* libcurand*.so* libcusparse*.so* libcusolver*.so*"
+
+    local copied_libs=0
+    for lib_dir in /lib/aarch64-linux-gnu /usr/lib/aarch64-linux-gnu /lib64 /usr/local/cuda/lib64; do
+        if [ -d "$lib_dir" ]; then
+            local target_dir="$ISOLATED_DIR${lib_dir}"
+            mkdir -p "$target_dir"
+            for pattern in $lib_patterns; do
+                local found_libs=$(find "$lib_dir" -maxdepth 1 -name "$pattern" 2>/dev/null | wc -l)
+                if [ "$found_libs" -gt 0 ]; then
+                    find "$lib_dir" -maxdepth 1 -name "$pattern" -exec cp -P {} "$target_dir" \; 2>/dev/null && ((copied_libs+=found_libs)) || true
+                fi
+            done
+        fi
+    done
+
+    echo "  ✓ Copied $copied_libs library files"
+
+    # Dynamic linker
+    if [ -f "/lib/ld-linux-aarch64.so.1" ]; then
+        mkdir -p "$ISOLATED_DIR/lib"
+        if cp -P "/lib/ld-linux-aarch64.so.1" "$ISOLATED_DIR/lib64/" 2>/dev/null; then
+            echo "  ✓ Copied dynamic linker"
+        else
+            echo "  ⚠ Failed to copy dynamic linker"
+        fi
+    else
+        echo "  ⚠ Dynamic linker not found"
+    fi
+
+    echo "✓ System files copied"
+}
+
+# =============================================================================
+# CUDA INSTALLATION
+# =============================================================================
+
+install_cuda() {
+    echo "Setting up CUDA environment..."
+
+    # Check if CUDA is available on the system
+    if [ -d "/usr/local/cuda" ]; then
+        echo "Found CUDA installation, copying libraries..."
+
+        # Copy CUDA libraries
+        if [ -d "/usr/local/cuda/lib64" ]; then
+            echo "Copying CUDA libraries from /usr/local/cuda/lib64..."
+            mkdir -p "$ISOLATED_DIR/usr/local/cuda/lib64"
+            cp -r /usr/local/cuda/lib64/* "$ISOLATED_DIR/usr/local/cuda/lib64/" 2>/dev/null || echo "  ⚠ Some CUDA libraries couldn't be copied"
+        fi
+
+        # Copy CUDA binaries
+        if [ -d "/usr/local/cuda/bin" ]; then
+            echo "Copying CUDA binaries from /usr/local/cuda/bin..."
+            mkdir -p "$ISOLATED_DIR/usr/local/cuda/bin"
+            cp -r /usr/local/cuda/bin/* "$ISOLATED_DIR/usr/local/cuda/bin/" 2>/dev/null || echo "  ⚠ Some CUDA binaries couldn't be copied"
+        fi
+
+        echo "✓ CUDA environment copied"
+    else
+        echo "⚠ WARNING: No CUDA installation found at /usr/local/cuda"
+        echo "⚠ PyTorch will be installed with CUDA support, but may require CUDA at runtime"
+    fi
+}
+
+# =============================================================================
+# PYTHON INSTALLATION
+# =============================================================================
+
+install_python() {
+    echo "Setting up Python environment..."
+
+    # Install Python packages in chroot environment
+    if [ "${JOBLET_CHROOT:-false}" = "true" ] && command -v yum >/dev/null 2>&1; then
+        echo "Installing Python packages in chroot environment..."
+        export 
+        if ! yum update -qq 2>/dev/null; then
+            echo "⚠ yum update failed, but continuing with existing package cache"
+        fi
+        if ! yum install -y python3 python3-dev python3-venv python3-pip python3-setuptools python3-wheel \
+                          build-essential libopenblas-dev liblapack-dev libffi-dev 2>/dev/null; then
+            echo "⚠ Some Python packages failed to install in chroot, but this is non-critical"
+        fi
+    else
+        echo "Not in chroot or apt not available - copying existing Python from host"
+    fi
+
+    # Copy Python runtime
+    echo "Copying Python standard libraries..."
+    local python_copied=false
+    for py_dir in /usr/lib/python3*; do
+        if [ -d "$py_dir" ]; then
+            echo "  Copying $py_dir..."
+            if cp -r "$py_dir" "$ISOLATED_DIR/usr/lib/" 2>/dev/null; then
+                python_copied=true
+            else
+                echo "⚠ Failed to copy $py_dir (non-critical)"
+            fi
+        fi
+    done
+
+    if [ "$python_copied" = false ]; then
+        echo "❌ CRITICAL: No Python libraries were copied successfully"
+        exit 1
+    fi
+
+    # Copy lib-dynload and other essential Python directories
+    for py_lib in /usr/lib/python3*/lib-dynload; do
+        if [ -d "$py_lib" ]; then
+            echo "  Copying dynamic modules from $py_lib..."
+            py_parent=$(dirname "$py_lib" | sed "s|^/usr||")
+            mkdir -p "$ISOLATED_DIR/usr/$py_parent"
+            if ! cp -r "$py_lib" "$ISOLATED_DIR/usr/$py_parent/" 2>/dev/null; then
+                echo "⚠ Failed to copy $py_lib (non-critical)"
+            fi
+        fi
+    done
+
+    # Create symlinks
+    cd "$ISOLATED_DIR/usr/bin"
+    [ -f python3.11 ] && ln -sf python3.11 python 2>/dev/null || true
+    [ -f python3 ] && [ ! -f python ] && ln -sf python3 python 2>/dev/null || true
+    [ -f pip3 ] && ln -sf pip3 pip 2>/dev/null || true
+    cd - >/dev/null
+
+    echo "✓ Python environment ready"
+}
+
+# =============================================================================
+# PYTORCH AND CUDA PACKAGES
+# =============================================================================
+
 }
 
 # =============================================================================

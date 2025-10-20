@@ -286,35 +286,113 @@ install_pytorch_packages() {
     echo "Installing PyTorch packages: ${pytorch_packages[*]}"
     echo "Installing ML packages: ${ml_packages[*]}"
 
-    # Update pip first
-    python3 -m pip install --upgrade pip --quiet 2>/dev/null || echo "  ⚠ Could not upgrade pip"
+    # Check DNS resolution in chroot
+    echo "Checking network connectivity..."
+    if ! ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+        echo "  ⚠ WARNING: No network connectivity detected"
+        echo "  ⚠ Package installation may fail"
+    else
+        echo "  ✓ Network connectivity OK"
+    fi
+
+    # Configure pip for better reliability
+    mkdir -p ~/.pip
+    cat > ~/.pip/pip.conf << 'PIPCONF'
+[global]
+timeout = 300
+retries = 3
+index-url = https://pypi.org/simple
+trusted-host = pypi.org
+               pypi.python.org
+               files.pythonhosted.org
+               download.pytorch.org
+PIPCONF
+
+    # Update pip first (with verbose output)
+    echo "Updating pip..."
+    python3 -m pip install --upgrade pip 2>&1 | grep -v "^Requirement already satisfied" || echo "  ⚠ Could not upgrade pip"
 
     local installed_packages=()
     local failed_packages=()
 
     # Install PyTorch with CUDA support
     # Using PyTorch index URL for CUDA 11.8
+    echo ""
+    echo "========================================="
     echo "Installing PyTorch with CUDA 11.8 support..."
-    if python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --quiet 2>/dev/null; then
-        installed_packages+=("torch" "torchvision" "torchaudio")
-        echo "  ✓ PyTorch with CUDA installed in system"
-    else
-        echo "  ⚠ PyTorch CUDA installation failed, trying CPU version..."
-        if python3 -m pip install torch torchvision torchaudio --quiet 2>/dev/null; then
+    echo "========================================="
+
+    # First attempt: CUDA version with verbose output
+    local pytorch_installed=false
+    echo "Attempt 1: Installing PyTorch with CUDA 11.8..."
+    if python3 -m pip install torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu118 \
+        --no-cache-dir \
+        --timeout=300 \
+        --retries=3 2>&1 | tee /tmp/pytorch_install.log; then
+
+        # Verify torch was actually installed
+        if python3 -c "import torch; print('PyTorch version:', torch.__version__)" 2>/dev/null; then
             installed_packages+=("torch" "torchvision" "torchaudio")
-            echo "  ✓ PyTorch (CPU) installed in system"
+            pytorch_installed=true
+            echo "  ✓ PyTorch with CUDA installed successfully"
         else
-            failed_packages+=("torch" "torchvision" "torchaudio")
-            echo "  ✗ Failed to install PyTorch"
+            echo "  ⚠ PyTorch install command succeeded but import failed"
+        fi
+    else
+        echo "  ⚠ PyTorch CUDA installation failed"
+        echo "  📄 Error log saved to /tmp/pytorch_install.log"
+        cat /tmp/pytorch_install.log | tail -20
+    fi
+
+    # Second attempt: CPU version if CUDA failed
+    if [ "$pytorch_installed" = false ]; then
+        echo ""
+        echo "Attempt 2: Installing PyTorch CPU version..."
+        if python3 -m pip install torch torchvision torchaudio \
+            --no-cache-dir \
+            --timeout=300 \
+            --retries=3 2>&1; then
+
+            if python3 -c "import torch; print('PyTorch version:', torch.__version__)" 2>/dev/null; then
+                installed_packages+=("torch" "torchvision" "torchaudio")
+                pytorch_installed=true
+                echo "  ✓ PyTorch (CPU) installed successfully"
+            else
+                echo "  ⚠ PyTorch CPU install command succeeded but import failed"
+            fi
+        else
+            echo "  ✗ PyTorch CPU installation also failed"
         fi
     fi
 
-    # Install additional ML packages
+    # If both attempts failed, add to failed packages
+    if [ "$pytorch_installed" = false ]; then
+        failed_packages+=("torch" "torchvision" "torchaudio")
+        echo "  ✗ All PyTorch installation attempts failed"
+    fi
+
+    # Install additional ML packages (one by one with error handling)
+    echo ""
+    echo "========================================="
+    echo "Installing ML packages..."
+    echo "========================================="
     for package in "${ml_packages[@]}"; do
         echo "Installing $package..."
-        if python3 -m pip install "$package" --quiet 2>/dev/null; then
-            installed_packages+=("$package")
-            echo "  ✓ $package installed in system"
+        if python3 -m pip install "$package" --no-cache-dir --timeout=180 2>&1 | grep -E "(Successfully installed|Requirement already satisfied)"; then
+            # Verify package can be imported
+            local pkg_import="${package}"
+            # Handle special import names
+            [ "$package" = "scikit-learn" ] && pkg_import="sklearn"
+            [ "$package" = "pillow" ] && pkg_import="PIL"
+
+            if python3 -c "import ${pkg_import}" 2>/dev/null; then
+                installed_packages+=("$package")
+                echo "  ✓ $package installed and verified"
+            else
+                failed_packages+=("$package")
+                echo "  ⚠ $package installed but import failed"
+            fi
         else
             failed_packages+=("$package")
             echo "  ✗ Failed to install $package"
@@ -323,13 +401,19 @@ install_pytorch_packages() {
 
     # Copy installed packages to isolated environment
     echo ""
+    echo "========================================="
     echo "Copying installed packages to isolated environment..."
+    echo "========================================="
 
     # Copy system site-packages
     for python_path in /usr/local/lib/python3*/dist-packages /usr/lib/python3/dist-packages /usr/local/lib/python3*/site-packages; do
         if [ -d "$python_path" ]; then
             echo "Copying from $python_path..."
-            cp -r "$python_path"/* "$site_packages/" 2>/dev/null || echo "  ⚠ Some files couldn't be copied from $python_path"
+            local copied_files=$(find "$python_path" -type f 2>/dev/null | wc -l)
+            if [ "$copied_files" -gt 0 ]; then
+                cp -r "$python_path"/* "$site_packages/" 2>/dev/null || echo "  ⚠ Some files couldn't be copied from $python_path"
+                echo "  ✓ Copied $copied_files files"
+            fi
         fi
     done
 
@@ -342,7 +426,9 @@ install_pytorch_packages() {
 
     # Report installation results
     echo ""
+    echo "========================================="
     echo "📊 PyTorch/ML Package Installation Results:"
+    echo "========================================="
     echo "  Successfully installed: ${#installed_packages[@]} packages"
     [ ${#installed_packages[@]} -gt 0 ] && echo "    ${installed_packages[*]}"
     echo "  Failed to install: ${#failed_packages[@]} packages"
@@ -351,6 +437,14 @@ install_pytorch_packages() {
     # Count final files
     local final_files=$(find "$site_packages" -name "*.py" -type f 2>/dev/null | wc -l)
     echo "  Final Python files in isolated packages: $final_files"
+
+    # Verify PyTorch specifically
+    if [ -d "$site_packages/torch" ]; then
+        local torch_size=$(du -sh "$site_packages/torch" 2>/dev/null | cut -f1)
+        echo "  ✓ PyTorch package found in isolated env (size: $torch_size)"
+    else
+        echo "  ⚠ PyTorch package NOT found in isolated environment"
+    fi
 
     echo "✓ PyTorch/ML packages installation completed"
 }
