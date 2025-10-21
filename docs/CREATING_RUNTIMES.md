@@ -1,0 +1,1296 @@
+# Creating Your Own Joblet Runtime: Complete Guide
+
+This guide walks you through creating a custom runtime for Joblet, from concept to release. No prior experience needed -
+we'll explain everything step by step.
+
+## Table of Contents
+
+1. [Before You Start](#before-you-start)
+2. [Runtime Creation Process](#runtime-creation-process)
+3. [Step 1: Plan Your Runtime](#step-1-plan-your-runtime)
+4. [Step 2: Create Directory Structure](#step-2-create-directory-structure)
+5. [Step 3: Write the Manifest](#step-3-write-the-manifest)
+6. [Step 4: Create Setup Scripts](#step-4-create-setup-scripts)
+7. [Step 5: Test Locally](#step-5-test-locally)
+8. [Step 6: Add to Repository](#step-6-add-to-repository)
+9. [Advanced Topics](#advanced-topics)
+10. [Troubleshooting](#troubleshooting)
+
+---
+
+## 🚦 Before You Start
+
+### ✅ Prerequisites
+
+- Basic understanding of Bash scripting
+- Familiarity with the language/framework your runtime will support
+- Access to this repository (fork or direct access)
+- A Linux machine for testing (Ubuntu recommended)
+
+### 🎁 What You'll Create
+
+By the end of this guide, you'll have:
+
+- ✅ A complete runtime directory (`runtimes/your-runtime-name/`)
+- ✅ A `manifest.yaml` file describing the runtime
+- ✅ Setup scripts for installing the runtime
+- ✅ Documentation for users
+- ✅ A tested, working runtime ready for release
+
+### ⏱️ Time Estimate
+
+- **Simple runtime** (basic Python, Node.js): 1-2 hours
+- **Complex runtime** (PyTorch + CUDA, Java + native tools): 3-5 hours
+
+---
+
+## 🔄 Runtime Creation Process
+
+Here's the big picture of what we'll do:
+
+```
+1. Plan         → Decide what your runtime includes
+                   (language, packages, tools)
+
+2. Create       → Make directory structure
+   Directory      runtimes/my-runtime/
+
+3. Write        → Create manifest.yaml
+   Manifest       (what to install, what versions)
+
+4. Create       → Write setup scripts
+   Setup          - setup.sh (dispatcher)
+   Scripts        - setup-ubuntu-amd64.sh (actual installer)
+                  - setup-<other-platforms>.sh
+
+5. Test         → Run setup script locally
+   Locally        Verify runtime works
+
+6. Add to       → Commit to repository
+   Repository     Git tag for release
+
+7. Release      → GitHub Actions builds and publishes
+                   Users can install via rnx
+```
+
+Let's dive in!
+
+---
+
+## 📝 Step 1: Plan Your Runtime
+
+### 🏷️ Choose a Name
+
+Runtime names must follow these rules:
+
+**✅ Allowed:**
+
+- Lowercase letters (a-z)
+- Numbers (0-9)
+- Dots (.)
+- Hyphens (-)
+
+**❌ Not Allowed:**
+
+- Uppercase letters
+- Underscores
+- Special characters (@, #, $, etc.)
+- Spaces
+
+**Good Examples:**
+
+```
+python-3.11
+python-3.11-ml
+python-3.11-pytorch-cuda
+openjdk-21
+graalvmjdk-21
+node-18.20
+rust-1.75
+go-1.21
+```
+
+**Bad Examples:**
+
+```
+Python-3.11          ❌ Uppercase
+python_3.11          ❌ Underscores
+python@3.11          ❌ @ symbol
+Python ML            ❌ Spaces
+```
+
+### 📋 Decide What to Include
+
+Make a list of everything your runtime needs:
+
+**Example: Python ML Runtime**
+
+```
+Language:
+  - Python 3.11
+
+System Tools:
+  - bash, sh, ls, cat, cp, mv, rm
+  - curl, wget (for downloading data)
+  - tar, gzip (for compression)
+
+System Libraries:
+  - libc, libssl, libcrypto
+  - libffi (for Python C extensions)
+  - libopenblas (for NumPy/SciPy)
+
+Python Packages:
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - scipy
+```
+
+**Example: Java Runtime**
+
+```
+Language:
+  - OpenJDK 21
+
+System Tools:
+  - bash, sh, basic Unix tools
+  - jar, javac, java
+
+System Libraries:
+  - libc, libssl
+  - libz (compression)
+
+Java Libraries:
+  - Spring Boot
+  - Apache Commons
+  - (or none if using Maven at runtime)
+```
+
+### 🖥️ Choose Target Platforms
+
+Decide which platforms to support:
+
+- `ubuntu-amd64` - Ubuntu/Debian on Intel/AMD (most common)
+- `ubuntu-arm64` - Ubuntu/Debian on ARM (Apple M1, AWS Graviton)
+- `rhel-amd64` - Red Hat/CentOS/Rocky on Intel/AMD
+- `rhel-arm64` - Red Hat/CentOS/Rocky on ARM
+- `amzn-amd64` - Amazon Linux on Intel/AMD
+- `amzn-arm64` - Amazon Linux on ARM
+
+**Recommendation:** Start with `ubuntu-amd64`, add others later.
+
+---
+
+## 📁 Step 2: Create Directory Structure
+
+### 🆕 Create the Runtime Directory
+
+```bash
+# Navigate to the repository
+cd ~/joblet/joblet-runtimes
+
+# Create runtime directory
+mkdir -p runtimes/my-runtime-name
+
+# Navigate to it
+cd runtimes/my-runtime-name
+```
+
+### Example Structure
+
+Your runtime directory will look like this when complete:
+
+```
+runtimes/my-runtime-name/
+├── manifest.yaml                  # Runtime metadata and package list
+├── setup.sh                       # Main setup script (dispatcher)
+├── setup-ubuntu-amd64.sh          # Ubuntu AMD64 installer
+├── setup-ubuntu-arm64.sh          # Ubuntu ARM64 installer (optional)
+├── setup-rhel-amd64.sh            # RHEL AMD64 installer (optional)
+└── versions.lock                  # Auto-generated by CI (don't create manually)
+```
+
+For now, we'll create:
+
+1. `manifest.yaml`
+2. `setup.sh`
+3. `setup-ubuntu-amd64.sh` (one platform to start)
+
+---
+
+## 📄 Step 3: Write the Manifest
+
+The `manifest.yaml` file describes your runtime.
+
+### 📝 Basic Template
+
+Create `runtimes/my-runtime-name/manifest.yaml`:
+
+```yaml
+# Joblet Runtime: my-runtime-name
+# For use with Joblet - https://github.com/ehsaniara/joblet
+
+name: my-runtime-name
+version: 1.0.0
+description: Brief description of what this runtime includes
+
+# Supported platforms
+platforms:
+  - ubuntu-amd64
+  # - ubuntu-arm64  # Add more as you create setup scripts
+  # - rhel-amd64
+
+# Package list (exact versions)
+packages:
+  - package1==1.0.0
+  - package2==2.5.0
+  # Add more packages as needed
+```
+
+### Real-World Example: Python ML Runtime
+
+```yaml
+# Joblet Runtime: python-3.11-ml
+# For use with Joblet - https://github.com/ehsaniara/joblet
+
+name: python-3.11-ml
+version: 1.0.0
+description: Python 3.11 with ML libraries (NumPy, Pandas, Scikit-learn)
+python_version: 3.11.7
+
+platforms:
+  - ubuntu-amd64
+  - ubuntu-arm64
+
+# Key packages (exact versions for reproducibility)
+packages:
+  - numpy==1.26.2
+  - scipy==1.11.4
+  - pandas==2.1.3
+  - scikit-learn==1.3.2
+  - matplotlib==3.8.2
+  - seaborn==0.13.0
+  - joblib==1.3.2
+  - pillow==10.1.0
+```
+
+### Field Explanations
+
+**`name`** (required)
+
+- Must match directory name
+- Must follow naming rules (lowercase, hyphens, dots only)
+
+**`version`** (required)
+
+- Semantic version: `MAJOR.MINOR.PATCH`
+- Start with `1.0.0`
+- Will be auto-updated by CI when you release
+
+**`description`** (required)
+
+- One-line description
+- Shown to users in `rnx runtime list`
+
+**`platforms`** (required)
+
+- List of supported platforms
+- Must have at least one
+- Each platform needs a corresponding `setup-<platform>.sh` script
+
+**`packages`** (optional)
+
+- List of packages to install
+- Pin exact versions for reproducibility
+- Format depends on package manager:
+    - Python: `numpy==1.26.2`
+    - Java: `spring-boot:3.2.0`
+    - Node: `express@4.18.0`
+
+**Custom fields** (optional)
+
+- You can add extra fields for documentation
+- Examples: `python_version`, `java_version`, `cuda_version`
+
+---
+
+## 🛠️ Step 4: Create Setup Scripts
+
+### 📖 Overview
+
+You need two types of scripts:
+
+1. **`setup.sh`** - Dispatcher that detects platform and calls the right script
+2. **`setup-<platform>.sh`** - Platform-specific installer
+
+### Script 1: `setup.sh` (Dispatcher)
+
+This script is the same for all runtimes. Create `runtimes/my-runtime-name/setup.sh`:
+
+```bash
+#!/bin/bash
+# Runtime Setup - Multi-platform dispatcher
+# Detects platform and delegates to appropriate platform-specific setup script
+
+set -e
+
+echo "Starting runtime setup (multi-platform)..."
+echo "Build ID: ${BUILD_ID:-unknown}"
+echo "Runtime Spec: ${RUNTIME_SPEC:-unknown}"
+echo "Chroot: ${JOBLET_CHROOT:-false}"
+
+# Detect architecture
+detect_architecture() {
+    case "$(uname -m)" in
+        x86_64) echo "amd64" ;;
+        aarch64|arm64) echo "arm64" ;;
+        *) echo "amd64" ;;
+    esac
+}
+
+# Detect distribution
+detect_distribution() {
+    if [ -f /etc/os-release ]; then
+        source /etc/os-release
+        case "$ID" in
+            ubuntu|debian) echo "ubuntu" ;;
+            rhel|centos|rocky|alma) echo "rhel" ;;
+            amzn) echo "amzn" ;;
+            *) echo "ubuntu" ;;
+        esac
+    else
+        echo "ubuntu"
+    fi
+}
+
+# Get script directory
+SCRIPT_DIR="$(dirname "$0")"
+
+# Detect current platform
+ARCHITECTURE=$(detect_architecture)
+DISTRIBUTION=$(detect_distribution)
+
+echo "Detected platform:"
+echo "  Architecture: $ARCHITECTURE"
+echo "  Distribution: $DISTRIBUTION"
+
+# Get platform-specific script name
+PLATFORM_SCRIPT="setup-${DISTRIBUTION}-${ARCHITECTURE}.sh"
+PLATFORM_SCRIPT_PATH="$SCRIPT_DIR/$PLATFORM_SCRIPT"
+
+if [ -f "$PLATFORM_SCRIPT_PATH" ]; then
+    echo "Delegating to platform-specific script: $PLATFORM_SCRIPT"
+    chmod +x "$PLATFORM_SCRIPT_PATH"
+    exec "$PLATFORM_SCRIPT_PATH"
+else
+    echo "ERROR: Platform-specific script $PLATFORM_SCRIPT not found"
+    echo "Available platform combinations:"
+    echo "  - ubuntu-amd64, ubuntu-arm64"
+    echo "  - rhel-amd64, rhel-arm64"
+    echo "  - amzn-amd64, amzn-arm64"
+    echo "Detected: $DISTRIBUTION-$ARCHITECTURE"
+    exit 1
+fi
+```
+
+Make it executable:
+
+```bash
+chmod +x setup.sh
+```
+
+### Script 2: `setup-ubuntu-amd64.sh` (Platform-Specific Installer)
+
+This is where the real work happens. The structure follows a proven pattern.
+
+Create `runtimes/my-runtime-name/setup-ubuntu-amd64.sh`:
+
+```bash
+#!/bin/bash
+# Runtime Setup for Ubuntu/Debian AMD64
+# This script creates an isolated runtime environment
+
+set -e  # Exit on any error
+set -u  # Exit on undefined variables
+set -o pipefail  # Exit on pipe failures
+
+# Error handling
+handle_error() {
+    local exit_code=$?
+    local line_number=$1
+    echo "❌ ERROR: Script failed at line $line_number with exit code $exit_code"
+    echo "❌ Installation FAILED - runtime may be in inconsistent state"
+    exit $exit_code
+}
+
+trap 'handle_error ${LINENO}' ERR
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+RUNTIME_NAME="${RUNTIME_NAME:-my-runtime-name}"
+RUNTIME_BASE_DIR="/opt/joblet/runtimes/$RUNTIME_NAME"
+ISOLATED_DIR="$RUNTIME_BASE_DIR/isolated"
+
+echo "Starting runtime setup..."
+echo "Platform: ubuntu-amd64"
+echo "Runtime: $RUNTIME_NAME"
+echo "Installation path: $RUNTIME_BASE_DIR"
+
+# =============================================================================
+# SAFETY CHECKS - NO HOST CONTAMINATION
+# =============================================================================
+
+safety_check() {
+    echo "Performing safety checks to prevent host contamination..."
+
+    # Verify we're in a controlled environment
+    if [ "${JOBLET_CHROOT:-false}" != "true" ] && [ -z "${BUILD_ID:-}" ]; then
+        echo "⚠ WARNING: Not running in joblet build environment"
+        echo "This script should only run within joblet runtime installation"
+    fi
+
+    # Ensure target directory is within expected path
+    if [[ "$RUNTIME_BASE_DIR" != "/opt/joblet/runtimes/"* ]]; then
+        echo "✗ ERROR: Invalid runtime base directory: $RUNTIME_BASE_DIR"
+        exit 1
+    fi
+
+    echo "✓ Safety checks passed - no host contamination risk"
+}
+
+# =============================================================================
+# DIRECTORY SETUP
+# =============================================================================
+
+create_directories() {
+    echo "Creating runtime directories..."
+
+    mkdir -p "$RUNTIME_BASE_DIR"
+    cd "$RUNTIME_BASE_DIR"
+
+    # Create isolated filesystem structure
+    local dirs=(
+        bin lib lib64 usr/bin usr/lib usr/local/lib
+        etc tmp proc lib/x86_64-linux-gnu usr/lib/x86_64-linux-gnu
+    )
+
+    for dir in "${dirs[@]}"; do
+        mkdir -p "$ISOLATED_DIR/$dir"
+    done
+
+    echo "✓ Directories created"
+}
+
+# =============================================================================
+# SYSTEM FILES COPY
+# =============================================================================
+
+copy_system_files() {
+    echo "Copying system files..."
+
+    # Essential binaries
+    local binaries="bash sh ls cat cp mv rm mkdir chmod grep sed awk ps echo tar gzip curl wget"
+
+    for bin in $binaries; do
+        for path in /bin /usr/bin; do
+            if [ -f "$path/$bin" ]; then
+                cp -P "$path/$bin" "$ISOLATED_DIR/usr/bin/" 2>/dev/null && break
+            fi
+        done
+    done
+
+    # Essential libraries
+    local lib_patterns="libc.so* libdl.so* libpthread.so* libm.so* ld-linux*.so* libz.so* libssl.so* libcrypto.so* libffi.so*"
+
+    for lib_dir in /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /lib64; do
+        if [ -d "$lib_dir" ]; then
+            mkdir -p "$ISOLATED_DIR${lib_dir}"
+            for pattern in $lib_patterns; do
+                find "$lib_dir" -maxdepth 1 -name "$pattern" -exec cp -P {} "$ISOLATED_DIR${lib_dir}" \; 2>/dev/null || true
+            done
+        fi
+    done
+
+    # Dynamic linker
+    if [ -f "/lib64/ld-linux-x86-64.so.2" ]; then
+        mkdir -p "$ISOLATED_DIR/lib64"
+        cp -P "/lib64/ld-linux-x86-64.so.2" "$ISOLATED_DIR/lib64/" 2>/dev/null || true
+    fi
+
+    echo "✓ System files copied"
+}
+
+# =============================================================================
+# INSTALL YOUR RUNTIME-SPECIFIC PACKAGES HERE
+# =============================================================================
+
+install_runtime_packages() {
+    echo "Installing runtime-specific packages..."
+
+    # Example: Install Python (adapt for your runtime)
+    # if [ "${JOBLET_CHROOT:-false}" = "true" ]; then
+    #     export DEBIAN_FRONTEND=noninteractive
+    #     apt-get update -qq
+    #     apt-get install -y python3 python3-pip python3-venv
+    # fi
+
+    # Copy runtime files
+    # Example: Copy Python from host
+    # for py_dir in /usr/lib/python3*; do
+    #     if [ -d "$py_dir" ]; then
+    #         cp -r "$py_dir" "$ISOLATED_DIR/usr/lib/"
+    #     fi
+    # done
+
+    # Install packages using package manager
+    # Example: pip install numpy pandas
+    # python3 -m pip install numpy==1.26.2 pandas==2.1.3
+
+    echo "✓ Runtime packages installed"
+}
+
+# =============================================================================
+# CONFIGURATION FILES
+# =============================================================================
+
+create_config_files() {
+    echo "Creating configuration files..."
+
+    # Minimal /etc files
+    cat > "$ISOLATED_DIR/etc/passwd" << 'EOF'
+root:x:0:0:root:/root:/bin/bash
+nobody:x:65534:65534:nobody:/nonexistent:/bin/false
+EOF
+
+    cat > "$ISOLATED_DIR/etc/group" << 'EOF'
+root:x:0:
+nogroup:x:65534:
+EOF
+
+    # Runtime configuration
+    cat > "$RUNTIME_BASE_DIR/runtime.yml" << EOF
+name: $RUNTIME_NAME
+version: "${RUNTIME_VERSION:-1.0}"
+description: "Description of your runtime"
+
+mounts:
+  - source: "isolated/bin"
+    target: "/bin"
+    readonly: true
+  - source: "isolated/lib"
+    target: "/lib"
+    readonly: true
+  - source: "isolated/lib64"
+    target: "/lib64"
+    readonly: true
+  - source: "isolated/usr"
+    target: "/usr"
+    readonly: true
+  - source: "isolated/etc"
+    target: "/etc"
+    readonly: true
+  - source: "isolated/tmp"
+    target: "/tmp"
+    readonly: false
+
+environment:
+  PATH: "/usr/bin:/bin"
+  # Add runtime-specific environment variables here
+EOF
+
+    echo "✓ Configuration files created"
+}
+
+# =============================================================================
+# VALIDATION
+# =============================================================================
+
+validate_installation() {
+    echo "Validating installation..."
+
+    local status=0
+
+    # Check runtime.yml
+    [ -f "$RUNTIME_BASE_DIR/runtime.yml" ] && echo "✓ runtime.yml exists" || { echo "✗ runtime.yml missing"; status=1; }
+
+    # Check isolated directory
+    [ -d "$ISOLATED_DIR" ] && echo "✓ isolated directory exists" || { echo "✗ isolated directory missing"; status=1; }
+
+    # Report sizes
+    if [ -d "$ISOLATED_DIR" ]; then
+        local file_count=$(find "$ISOLATED_DIR" -type f 2>/dev/null | wc -l)
+        local dir_size=$(du -sh "$ISOLATED_DIR" 2>/dev/null | cut -f1)
+        echo "✓ Total files: $file_count"
+        echo "✓ Directory size: $dir_size"
+    fi
+
+    return $status
+}
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+
+main() {
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "Runtime Installation"
+    echo "═══════════════════════════════════════════════════════════════"
+
+    safety_check
+    create_directories
+    copy_system_files
+    install_runtime_packages
+    create_config_files
+
+    echo ""
+    if ! validate_installation; then
+        echo "❌ CRITICAL: Installation validation failed"
+        echo "❌ Runtime installation FAILED - check errors above"
+        exit 1
+    fi
+
+    echo ""
+    echo "🎉 Installation completed successfully!"
+    echo "Runtime installed at: $RUNTIME_BASE_DIR"
+}
+
+# Run installation
+main "$@"
+```
+
+Make it executable:
+
+```bash
+chmod +x setup-ubuntu-amd64.sh
+```
+
+### Customizing the Setup Script
+
+The key section to customize is `install_runtime_packages()`. Here are examples for different runtime types:
+
+**Python Runtime:**
+
+```bash
+install_runtime_packages() {
+    echo "Installing Python and packages..."
+
+    # Install Python in chroot (during build)
+    if [ "${JOBLET_CHROOT:-false}" = "true" ]; then
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq
+        apt-get install -y python3 python3-pip python3-venv python3-dev
+    fi
+
+    # Copy Python standard library
+    for py_dir in /usr/lib/python3*; do
+        if [ -d "$py_dir" ]; then
+            cp -r "$py_dir" "$ISOLATED_DIR/usr/lib/"
+        fi
+    done
+
+    # Create site-packages directory
+    local site_packages="$ISOLATED_DIR/usr/local/lib/python3.11/dist-packages"
+    mkdir -p "$site_packages"
+
+    # Install packages
+    python3 -m pip install numpy==1.26.2 pandas==2.1.3
+
+    # Copy installed packages to isolated environment
+    for python_path in /usr/local/lib/python3*/dist-packages; do
+        if [ -d "$python_path" ]; then
+            cp -r "$python_path"/* "$site_packages/" 2>/dev/null || true
+        fi
+    done
+
+    echo "✓ Python packages installed"
+}
+```
+
+**Java Runtime:**
+
+```bash
+install_runtime_packages() {
+    echo "Installing OpenJDK..."
+
+    # Install OpenJDK in chroot
+    if [ "${JOBLET_CHROOT:-false}" = "true" ]; then
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq
+        apt-get install -y openjdk-21-jdk
+    fi
+
+    # Copy Java installation
+    if [ -d "/usr/lib/jvm/java-21-openjdk-amd64" ]; then
+        cp -r /usr/lib/jvm/java-21-openjdk-amd64 "$ISOLATED_DIR/usr/lib/jvm/"
+    fi
+
+    # Copy Java binaries
+    for bin in java javac jar; do
+        if [ -f "/usr/bin/$bin" ]; then
+            cp -P "/usr/bin/$bin" "$ISOLATED_DIR/usr/bin/"
+        fi
+    done
+
+    echo "✓ OpenJDK installed"
+}
+```
+
+**Node.js Runtime:**
+
+```bash
+install_runtime_packages() {
+    echo "Installing Node.js..."
+
+    # Install Node.js in chroot
+    if [ "${JOBLET_CHROOT:-false}" = "true" ]; then
+        export DEBIAN_FRONTEND=noninteractive
+        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+        apt-get install -y nodejs
+    fi
+
+    # Copy Node.js
+    if [ -f "/usr/bin/node" ]; then
+        cp -P /usr/bin/node "$ISOLATED_DIR/usr/bin/"
+        cp -P /usr/bin/npm "$ISOLATED_DIR/usr/bin/"
+    fi
+
+    # Copy Node.js libraries
+    if [ -d "/usr/lib/node_modules" ]; then
+        mkdir -p "$ISOLATED_DIR/usr/lib/"
+        cp -r /usr/lib/node_modules "$ISOLATED_DIR/usr/lib/"
+    fi
+
+    echo "✓ Node.js installed"
+}
+```
+
+---
+
+## 🧪 Step 5: Test Locally
+
+### ✅ Test the Setup Script
+
+Before committing, test your setup script locally:
+
+```bash
+# Navigate to your runtime directory
+cd runtimes/my-runtime-name
+
+# Run the setup script as root (required for /opt/joblet access)
+sudo RUNTIME_NAME=my-runtime-name bash setup.sh
+```
+
+**Expected output:**
+
+```
+Starting runtime setup (multi-platform)...
+Detected platform:
+  Architecture: amd64
+  Distribution: ubuntu
+Delegating to platform-specific script: setup-ubuntu-amd64.sh
+═══════════════════════════════════════════════════════════════
+Runtime Installation
+═══════════════════════════════════════════════════════════════
+Performing safety checks...
+✓ Safety checks passed
+Creating runtime directories...
+✓ Directories created
+Copying system files...
+✓ System files copied
+Installing runtime-specific packages...
+✓ Runtime packages installed
+Creating configuration files...
+✓ Configuration files created
+
+Validating installation...
+✓ runtime.yml exists
+✓ isolated directory exists
+✓ Total files: 1234
+✓ Directory size: 125M
+
+🎉 Installation completed successfully!
+Runtime installed at: /opt/joblet/runtimes/my-runtime-name
+```
+
+### Verify the Installation
+
+Check that the runtime was created correctly:
+
+```bash
+# Check directory structure
+ls -la /opt/joblet/runtimes/my-runtime-name/
+
+# Should show:
+# - runtime.yml
+# - isolated/
+
+# Check runtime.yml
+cat /opt/joblet/runtimes/my-runtime-name/runtime.yml
+
+# Check isolated filesystem
+ls -la /opt/joblet/runtimes/my-runtime-name/isolated/
+
+# Should show:
+# - bin/, lib/, lib64/, usr/, etc/, tmp/
+```
+
+### Test with a Job
+
+If you have Joblet installed, test running a job:
+
+```bash
+# Create a simple test script
+echo 'echo "Hello from my runtime!"' > test.sh
+
+# Run it with your runtime
+rnx job run --runtime=my-runtime-name bash test.sh
+
+# Expected output:
+# Hello from my runtime!
+```
+
+For Python runtime:
+
+```bash
+# Create Python test
+cat > test.py << 'EOF'
+import sys
+print(f"Python version: {sys.version}")
+
+# Test packages
+import numpy
+print(f"NumPy version: {numpy.__version__}")
+EOF
+
+# Run test
+rnx job run --runtime=my-runtime-name python test.py
+```
+
+---
+
+## 🚀 Step 6: Add to Repository
+
+### 💾 Commit Your Changes
+
+```bash
+# Navigate to repository root
+cd ~/joblet/joblet-runtimes
+
+# Add your runtime
+git add runtimes/my-runtime-name/
+
+# Commit
+git commit -m "Add my-runtime-name runtime v1.0.0
+
+- Python 3.11 with core packages
+- Supports ubuntu-amd64
+- Includes numpy, pandas, scikit-learn"
+
+# Push to main branch
+git push origin main
+```
+
+### 🎉 Create a Release
+
+Use the helper script:
+
+```bash
+# Release your runtime
+./scripts/release-runtime.sh my-runtime-name
+```
+
+**Output:**
+
+```
+Runtime: my-runtime-name
+Version: 1.0.0 (from manifest.yaml)
+Tag:     my-runtime-name@1.0.0
+
+This will:
+  1. Create git tag: my-runtime-name@1.0.0
+  2. Push to origin
+  3. Trigger GitHub Actions workflow
+  4. Build and release runtime package
+  5. Update registry.json
+
+Proceed with release? (yes/no): yes
+
+✓ Tag created: my-runtime-name@1.0.0
+✓ Tag pushed to origin
+✅ Release initiated!
+
+View workflow: https://github.com/ehsaniara/joblet-runtimes/actions
+```
+
+### GitHub Actions Will:
+
+1. Verify manifest version matches tag
+2. Build runtime package (tar.gz)
+3. Calculate SHA256 checksum
+4. Create GitHub release
+5. Upload package to release
+6. Update `registry.json` with new entry
+7. Commit updated registry back to main
+
+### Verify Release
+
+Check that everything worked:
+
+```bash
+# View releases
+# Go to: https://github.com/ehsaniara/joblet-runtimes/releases
+
+# Check registry.json was updated
+git pull origin main
+cat registry.json | jq '.runtimes["my-runtime-name"]'
+
+# Should show:
+# {
+#   "1.0.0": {
+#     "version": "1.0.0",
+#     "description": "...",
+#     "download_url": "...",
+#     "checksum": "sha256:...",
+#     ...
+#   }
+# }
+```
+
+### Test Installation
+
+Users can now install your runtime:
+
+```bash
+# Install from registry
+rnx runtime install my-runtime-name
+
+# Or specific version
+rnx runtime install my-runtime-name@1.0.0
+```
+
+---
+
+## 🎓 Advanced Topics
+
+### 🌍 Supporting Multiple Platforms
+
+Create additional setup scripts for each platform:
+
+```bash
+# Copy your ubuntu-amd64 script as a template
+cp setup-ubuntu-amd64.sh setup-ubuntu-arm64.sh
+
+# Edit for ARM differences (if any)
+vim setup-ubuntu-arm64.sh
+
+# Update manifest.yaml
+vim manifest.yaml
+# Add "- ubuntu-arm64" to platforms list
+```
+
+Platform-specific differences are usually minimal:
+
+- Library paths (`/lib/aarch64-linux-gnu` vs `/lib/x86_64-linux-gnu`)
+- Package names (sometimes ARM packages have different names)
+- Binary downloads (if downloading pre-built binaries)
+
+### Adding Version Locks
+
+The `versions.lock` file captures exact versions of all installed packages:
+
+**For Python:**
+
+```bash
+# After installation, generate versions.lock
+python3 -m pip freeze > "$RUNTIME_BASE_DIR/versions.lock"
+```
+
+**For Node.js:**
+
+```bash
+# Generate package versions
+npm list --depth=0 > "$RUNTIME_BASE_DIR/versions.lock"
+```
+
+**For Java:**
+
+```bash
+# List installed packages
+dpkg -l | grep openjdk > "$RUNTIME_BASE_DIR/versions.lock"
+```
+
+This ensures perfect reproducibility.
+
+### 🎮 GPU Support (CUDA)
+
+For runtimes needing GPU access:
+
+```yaml
+# manifest.yaml
+name: python-3.11-pytorch-cuda
+description: PyTorch with CUDA 11.8 for GPU training
+cuda_version: 11.8.0
+
+packages:
+  - torch==2.1.0+cu118
+  - torchvision==0.16.0+cu118
+```
+
+Setup script additions:
+
+```bash
+# Install CUDA libraries
+install_runtime_packages() {
+    # ... existing code ...
+
+    # Install CUDA libraries
+    if [ "${JOBLET_CHROOT:-false}" = "true" ]; then
+        apt-get install -y nvidia-cuda-toolkit
+    fi
+
+    # Copy CUDA libraries
+    for cuda_lib in /usr/lib/x86_64-linux-gnu/libcuda*.so*; do
+        if [ -f "$cuda_lib" ]; then
+            cp -P "$cuda_lib" "$ISOLATED_DIR/usr/lib/x86_64-linux-gnu/"
+        fi
+    done
+}
+```
+
+Update `runtime.yml`:
+
+```yaml
+environment:
+  PATH: "/usr/local/cuda/bin:/usr/bin:/bin"
+  LD_LIBRARY_PATH: "/usr/local/cuda/lib64:/usr/lib/x86_64-linux-gnu"
+  CUDA_HOME: "/usr/local/cuda"
+```
+
+### Large Dependencies
+
+For large packages (>100MB), consider:
+
+1. **Lazy loading** - Don't include every package, let jobs install at runtime if needed
+2. **Base + Extensions** - Create `python-3.11` (base) and `python-3.11-ml` (with ML libs)
+3. **Download during build** - Download large files in setup script instead of bundling
+
+Example:
+
+```bash
+# Download large model during setup
+download_large_files() {
+    echo "Downloading large dependencies..."
+
+    local models_dir="$ISOLATED_DIR/opt/models"
+    mkdir -p "$models_dir"
+
+    # Download model
+    curl -L "https://example.com/large-model.bin" -o "$models_dir/model.bin"
+
+    echo "✓ Large files downloaded"
+}
+```
+
+### Custom Environment Variables
+
+Add runtime-specific environment variables:
+
+```yaml
+# runtime.yml
+environment:
+  # Language-specific
+  PYTHONPATH: "/usr/local/lib/python3.11/dist-packages"
+  PYTHON_HOME: "/usr"
+
+  # Performance tuning
+  OPENBLAS_NUM_THREADS: "1"
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+
+  # Application-specific
+  MY_CUSTOM_VAR: "some_value"
+  CONFIG_PATH: "/opt/config"
+```
+
+These are automatically set for every job using this runtime.
+
+---
+
+## 🔧 Troubleshooting
+
+### ❌ Script Fails with "Permission Denied"
+
+**Problem:**
+
+```bash
+bash setup.sh
+# Error: Permission denied
+```
+
+**✅ Solution:**
+
+```bash
+# Run with sudo (required for /opt/joblet access)
+sudo bash setup.sh
+
+# Or make executable and run
+chmod +x setup.sh
+sudo ./setup.sh
+```
+
+### ⚠️ "Safety check failed"
+
+**Problem:**
+
+```
+✗ ERROR: Invalid runtime base directory
+```
+
+**Solution:**
+Ensure `RUNTIME_NAME` environment variable is set:
+
+```bash
+sudo RUNTIME_NAME=my-runtime-name bash setup.sh
+```
+
+### 📦 Packages Not Found After Installation
+
+**Problem:**
+Job runs but can't find packages:
+
+```python
+import numpy
+# ModuleNotFoundError: No module named 'numpy'
+```
+
+**Solution:**
+Check that packages were copied to the isolated directory:
+
+```bash
+# Check packages exist
+ls /opt/joblet/runtimes/my-runtime-name/isolated/usr/local/lib/python3.11/dist-packages/
+
+# Should show: numpy/, pandas/, etc.
+```
+
+If missing, check your `install_runtime_packages()` function.
+
+### Binary Not Found
+
+**Problem:**
+
+```
+bash: python3: command not found
+```
+
+**Solution:**
+Check binaries were copied:
+
+```bash
+ls /opt/joblet/runtimes/my-runtime-name/isolated/usr/bin/
+
+# Should show: python3, pip3, etc.
+```
+
+Ensure `copy_system_files()` includes your binary:
+
+```bash
+local binaries="bash sh python3 python3.11 pip3 ..."
+```
+
+### Libraries Not Loading
+
+**Problem:**
+
+```
+error while loading shared libraries: libssl.so.3: cannot open shared object file
+```
+
+**Solution:**
+Copy the missing library:
+
+```bash
+# Find library on host
+find /lib /usr/lib -name "libssl.so*"
+
+# Copy to isolated environment
+cp -P /usr/lib/x86_64-linux-gnu/libssl.so* \
+   /opt/joblet/runtimes/my-runtime-name/isolated/usr/lib/x86_64-linux-gnu/
+```
+
+Add to `lib_patterns` in `copy_system_files()`:
+
+```bash
+local lib_patterns="... libssl.so* ..."
+```
+
+### Tag Already Exists
+
+**Problem:**
+
+```
+error: tag 'my-runtime@1.0.0' already exists
+```
+
+**Solution:**
+Either:
+
+1. **Bump version** (recommended):
+   ```bash
+   # Update manifest.yaml
+   vim runtimes/my-runtime-name/manifest.yaml
+   # Change: version: 1.0.1
+
+   # Release with new version
+   ./scripts/release-runtime.sh my-runtime-name
+   ```
+
+2. **Delete existing tag**:
+   ```bash
+   # Delete local tag
+   git tag -d my-runtime-name@1.0.0
+
+   # Delete remote tag
+   git push origin :refs/tags/my-runtime-name@1.0.0
+
+   # Recreate
+   ./scripts/release-runtime.sh my-runtime-name
+   ```
+
+---
+
+## 📝 Summary
+
+### ✅ Checklist for Creating a Runtime
+
+✅ Chose a valid runtime name (lowercase, hyphens, dots only)
+✅ Created `runtimes/my-runtime-name/` directory
+✅ Wrote `manifest.yaml` with name, version, platforms, packages
+✅ Created `setup.sh` dispatcher script
+✅ Created `setup-ubuntu-amd64.sh` installer script
+✅ Customized `install_runtime_packages()` for your runtime
+✅ Tested locally with `sudo bash setup.sh`
+✅ Verified installation in `/opt/joblet/runtimes/`
+✅ Tested with a job using `rnx job run`
+✅ Committed to repository
+✅ Released using `./scripts/release-runtime.sh`
+✅ Verified release on GitHub
+✅ Tested installation from registry
+
+### Next Steps
+
+- Read [RELEASING.md](RELEASING.md) for release management
+- Read [RUNTIME_OVERVIEW.md](RUNTIME_OVERVIEW.md) for how runtimes work
+- Check existing runtimes in `runtimes/` for more examples
+- Join discussions in GitHub Issues
+
+### 💬 Getting Help
+
+- **Issues**: https://github.com/ehsaniara/joblet-runtimes/issues
+- **Discussions**: https://github.com/ehsaniara/joblet-runtimes/discussions
+- **Main Project**: https://github.com/ehsaniara/joblet
+
+Happy runtime building! 🚀

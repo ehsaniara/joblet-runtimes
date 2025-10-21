@@ -1,8 +1,8 @@
-# Runtime Release Guide
+# 🚀 Runtime Release Guide
 
 This guide explains how to release individual runtimes or bulk releases.
 
-## Table of Contents
+## 📑 Table of Contents
 
 - [Naming Conventions](#naming-conventions)
 - [Individual Runtime Release (Recommended)](#individual-runtime-release-recommended)
@@ -12,11 +12,11 @@ This guide explains how to release individual runtimes or bulk releases.
 
 ---
 
-## Naming Conventions
+## 🏷️ Naming Conventions
 
 All runtimes must follow strict naming conventions for consistency and compatibility.
 
-### Runtime Name Rules
+### 📝 Runtime Name Rules
 
 Runtime names must contain **only**:
 - ✅ Lowercase English letters (`a-z`)
@@ -47,7 +47,7 @@ Runtime names must contain **only**:
 ✗ Python ML 3.11          (spaces and uppercase)
 ```
 
-### Version Number Rules
+### 🔢 Version Number Rules
 
 Version numbers must follow **Semantic Versioning 2.0.0** format:
 
@@ -73,7 +73,7 @@ Version numbers must follow **Semantic Versioning 2.0.0** format:
 ✗ 1.0.0.0          (four parts)
 ```
 
-### Validation
+### ✅ Validation
 
 Use the validation script to check compliance:
 
@@ -96,7 +96,7 @@ The validation runs automatically during:
 - GitHub Actions workflow
 - CI/CD pipelines
 
-### Directory Structure
+### 📁 Directory Structure
 
 The runtime directory name should match the `name` field in `manifest.yaml`:
 
@@ -110,19 +110,19 @@ If they don't match, you'll get a warning (but it won't block releases).
 
 ---
 
-## Individual Runtime Release (Recommended)
+## 🎯 Individual Runtime Release (Recommended)
 
 Use this approach to release a single runtime without rebuilding all others.
 
-### Prerequisites
+### ✅ Prerequisites
 
 1. Update the runtime's `manifest.yaml` with the new version
 2. Make and commit your changes
 3. Ensure you're on the `main` branch and up to date
 
-### Step-by-Step Process
+### 📋 Step-by-Step Process
 
-#### Option 1: Using the Helper Script (Easiest)
+#### ⚡ Option 1: Using the Helper Script (Easiest)
 
 ```bash
 # Update manifest version first
@@ -145,7 +145,7 @@ The script will:
 - Push tag to GitHub
 - Trigger GitHub Actions workflow
 
-#### Option 2: Manual Tagging
+#### 🔧 Option 2: Manual Tagging
 
 ```bash
 # 1. Update manifest.yaml
@@ -162,7 +162,7 @@ git tag -a python-3.11-pytorch-cuda@1.3.2 -m "Release python-3.11-pytorch-cuda 1
 git push origin python-3.11-pytorch-cuda@1.3.2
 ```
 
-### What Happens Next
+### 🔄 What Happens Next
 
 GitHub Actions (`.github/workflows/release-runtime.yml`) will:
 
@@ -173,7 +173,7 @@ GitHub Actions (`.github/workflows/release-runtime.yml`) will:
 5. **Create GitHub release** with the runtime package
 6. **Commit** updated registry.json back to main
 
-### Example Workflow
+### 💡 Example Workflow
 
 ```bash
 # Update python-3.11-ml from 1.3.1 to 1.3.2
@@ -201,14 +201,14 @@ cd ../..
 # ✅ Release initiated!
 ```
 
-### Benefits of Individual Releases
+### ⭐ Benefits of Individual Releases
 
 ✅ **Faster** - Only builds one runtime (~2-3 min vs 10-15 min for all)
 ✅ **Independent** - Each runtime has its own version lifecycle
 ✅ **Safer** - No risk of accidentally updating unrelated runtimes
 ✅ **Cleaner** - Registry shows clear version history per runtime
 
-### Registry After Individual Release
+### 📊 Registry After Individual Release
 
 ```json
 {
@@ -229,17 +229,17 @@ cd ../..
 
 ---
 
-## Bulk Release (All Runtimes)
+## 📦 Bulk Release (All Runtimes)
 
 Use this approach when you want to release all runtimes with the same version.
 
-### When to Use
+### 🤔 When to Use
 
 - Initial registry setup
 - Major coordinated updates across all runtimes
 - Synchronized version bumps
 
-### Process
+### 🔄 Process
 
 ```bash
 # 1. Update ALL manifest.yaml files manually (or workflow will do it)
@@ -253,7 +253,7 @@ git tag -a v1.4.0 -m "Release all runtimes at version 1.4.0"
 git push origin v1.4.0
 ```
 
-### What Happens
+### ⚙️ What Happens
 
 GitHub Actions (`.github/workflows/release.yml`) will:
 
@@ -262,7 +262,7 @@ GitHub Actions (`.github/workflows/release.yml`) will:
 3. **Update registry.json** with all runtimes at version 1.4.0
 4. **Create** single GitHub release with all packages
 
-### Downside
+### ⚠️ Downside
 
 - Rebuilds ALL runtimes even if only one changed
 - Creates large releases (5+ packages)
@@ -271,7 +271,7 @@ GitHub Actions (`.github/workflows/release.yml`) will:
 
 ---
 
-## Registry Format
+## 📋 Registry Format
 
 The registry uses a **multi-version nested format**:
 
@@ -294,7 +294,7 @@ The registry uses a **multi-version nested format**:
 }
 ```
 
-### Version Resolution
+### 🔍 Version Resolution
 
 When users install a runtime:
 
@@ -316,9 +316,9 @@ The client:
 
 ---
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
-### Tag Already Exists
+### 🏷️ Tag Already Exists
 
 ```bash
 # Delete local tag
@@ -332,7 +332,7 @@ git tag -a python-3.11-ml@1.3.2 -m "..."
 git push origin python-3.11-ml@1.3.2
 ```
 
-### Version Mismatch Error
+### ⚠️ Version Mismatch Error
 
 ```
 Error: Version mismatch!
@@ -356,7 +356,7 @@ git push origin main
 ./scripts/release-runtime.sh python-3.11-ml
 ```
 
-### Workflow Not Triggering
+### ❌ Workflow Not Triggering
 
 Check that your tag matches the pattern:
 
@@ -366,7 +366,7 @@ Check that your tag matches the pattern:
 ❌ `python-3.11-ml-1.3.2` - Wrong (use @ not -)
 ❌ `python@1.3.2` - Wrong (no runtime named "python")
 
-### Check Workflow Status
+### 👀 Check Workflow Status
 
 ```bash
 # View recent tags
@@ -378,16 +378,16 @@ git tag -l '*@*' | tail -5
 
 ---
 
-## Best Practices
+## 💎 Best Practices
 
-### 1. Version Bumping
+### 1️⃣ Version Bumping
 
 Follow semantic versioning:
 - **Patch** (1.3.1 → 1.3.2): Bug fixes, minor improvements
 - **Minor** (1.3.2 → 1.4.0): New features, backwards compatible
 - **Major** (1.4.0 → 2.0.0): Breaking changes
 
-### 2. Testing Before Release
+### 2️⃣ Testing Before Release
 
 ```bash
 # Test runtime locally before releasing
@@ -398,7 +398,7 @@ sudo bash setup-ubuntu-amd64.sh
 ls -la /opt/joblet/runtimes/python-3.11-ml/
 ```
 
-### 3. Changelog
+### 3️⃣ Changelog
 
 Keep a changelog in your commit messages:
 
@@ -413,7 +413,7 @@ Improvements:
 This fixes issue #123"
 ```
 
-### 4. Multiple Runtime Updates
+### 4️⃣ Multiple Runtime Updates
 
 If updating multiple runtimes, release them separately:
 
@@ -435,7 +435,7 @@ git push origin main
 
 ---
 
-## Summary
+## 📝 Summary
 
 **For most releases, use individual runtime releases:**
 ```bash

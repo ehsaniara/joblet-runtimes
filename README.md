@@ -1,24 +1,24 @@
-# Joblet Runtime Registry
+# 📦 Joblet Runtime Registry
 
 Pre-built runtime environments for [Joblet](https://github.com/joblet/joblet) - so you can run jobs with **exactly** the dependencies you need, every time.
 
-## Why This Exists
+## 🎯 Why This Exists
 
 Running distributed jobs is tricky when different jobs need different library versions. You might need:
-- PyTorch 2.1 with CUDA for GPU training
-- NumPy 1.26 for data processing
-- OpenJDK 21 for your Java app
-- GraalVM for native compilation
+- 🤖 PyTorch 2.1 with CUDA for GPU training
+- 📊 NumPy 1.26 for data processing
+- ☕ OpenJDK 21 for your Java app
+- ⚡ GraalVM for native compilation
 
 Instead of managing dependencies manually on each machine, just pick a runtime and go. All dependencies are pre-built, versioned, and reproducible.
 
 Want another runtime? [Create one](#adding-a-runtime) - it's just a manifest file and setup scripts.
 
-## Quick Start
+## 🚀 Quick Start
 
 **Prerequisites:** You need [Joblet](https://github.com/joblet/joblet) installed with the `rnx` CLI.
 
-### Installing Runtimes
+### 📥 Installing Runtimes
 
 ```bash
 # Install a specific version (recommended for production)
@@ -33,7 +33,7 @@ rnx runtime list
 
 **Version notation:** We use `@` like npm - `runtime@version`. If you skip the `@version` part, you get `@latest`.
 
-### Running Jobs
+### ▶️ Running Jobs
 
 ```bash
 # Train a model with GPU
@@ -49,15 +49,15 @@ rnx job run --runtime=openjdk-21@1.0.0 java -jar myapp.jar
 rnx job run --runtime=graalvmjdk-21@1.0.0 native-image -jar myapp.jar
 ```
 
-## How It Works
+## ⚙️ How It Works
 
-1. You push a git tag like `v1.0.0`
-2. GitHub Actions **automatically updates all `manifest.yaml` files** to version `1.0.0`
-3. Builds all runtimes and captures exact package versions
-4. Creates a GitHub Release with downloadable packages
-5. Auto-generates `registry.json` with checksums for verification
-6. Commits updated manifests, registry, and version locks back to the repo
-7. Users install via `rnx` - downloads, verifies checksums, installs
+1. 🏷️ You push a git tag like `v1.0.0`
+2. 🔄 GitHub Actions **automatically updates all `manifest.yaml` files** to version `1.0.0`
+3. 🔨 Builds all runtimes and captures exact package versions
+4. 📦 Creates a GitHub Release with downloadable packages
+5. 🔐 Auto-generates `registry.json` with checksums for verification
+6. 💾 Commits updated manifests, registry, and version locks back to the repo
+7. 📥 Users install via `rnx` - downloads, verifies checksums, installs
 
 **Version sync:** The git tag version (e.g., `v1.2.3`) automatically updates all runtime `manifest.yaml` files to `version: 1.2.3`. This ensures consistency across all runtimes in a release.
 
@@ -70,7 +70,7 @@ rnx job run --runtime=graalvmjdk-21@1.0.0 native-image -jar myapp.jar
 
 Everything is reproducible because we lock exact versions (with SHA256 checksums) of every dependency.
 
-## Adding a Runtime
+## ➕ Adding a Runtime
 
 Want to add a new runtime? Here's how:
 
@@ -111,11 +111,11 @@ Want to add a new runtime? Here's how:
    git push origin v1.1.0
    ```
 
-5. **Done!** GitHub Actions builds it, creates the release, and users can install it.
+5. ✅ **Done!** GitHub Actions builds it, creates the release, and users can install it.
 
 See existing runtimes in the `runtimes/` directory for examples.
 
-## Configuration
+## ⚙️ Configuration
 
 Point Joblet to this registry by adding to `~/.rnx/config.yaml`:
 
@@ -127,9 +127,31 @@ runtimes:
       enabled: true
 ```
 
-## Project Info
+## 📚 Documentation
 
-- **Maintainer:** Jay Ehsaniara
-- **License:** MIT
-- **Main Project:** [Joblet](https://github.com/joblet/joblet) - Distributed job execution with cgroups isolation
+**New to runtimes?** Check out our comprehensive guides:
+
+- **[Runtime Overview](docs/RUNTIME_OVERVIEW.md)** - How runtimes work, the registry system, version management
+- **[Creating Runtimes](docs/CREATING_RUNTIMES.md)** - Step-by-step guide to building your own runtime
+- **[Releasing Runtimes](docs/RELEASING.md)** - How to release individual or bulk runtime updates
+- **[Docs Index](docs/README.md)** - Full documentation index with quick reference
+
+## 🎁 Available Runtimes
+
+| Runtime                    | Latest Version | Description                                                 |
+|----------------------------|----------------|-------------------------------------------------------------|
+| `python-3.11`              | 1.3.1          | Basic Python 3.11 runtime                                   |
+| `python-3.11-ml`           | 1.3.1          | Python 3.11 with ML libraries (NumPy, Pandas, Scikit-learn) |
+| `python-3.11-pytorch-cuda` | 1.3.1          | PyTorch 2.1.0 + CUDA 11.8 for GPU deep learning             |
+| `openjdk-21`               | 1.3.1          | OpenJDK 21 LTS with development tools                       |
+| `graalvmjdk-21`            | 1.3.1          | GraalVM CE 21 with native-image for AOT compilation         |
+
+See [registry.json](registry.json) for all available versions.
+
+## ℹ️ Project Info
+
+- 👤 **Maintainer:** Jay Ehsaniara
+- 📄 **License:** MIT
+- 🚀 **Main Project:** [Joblet](https://github.com/joblet/joblet) - Distributed job execution with cgroups isolation
+- 📚 **Documentation:** [docs/](docs/) - Comprehensive guides and references
 
