@@ -5,10 +5,10 @@ Pre-built runtime environments for [Joblet](https://github.com/joblet/joblet) - 
 ## 🎯 Why This Exists
 
 Running distributed jobs is tricky when different jobs need different library versions. You might need:
-- 🤖 PyTorch 2.1 with CUDA for GPU training
-- 📊 NumPy 1.26 for data processing
-- ☕ OpenJDK 21 for your Java app
-- ⚡ GraalVM for native compilation
+- PyTorch 2.1 with CUDA for GPU training
+- NumPy 1.26 for data processing
+- OpenJDK 21 for your Java app
+- GraalVM for native compilation
 
 Instead of managing dependencies manually on each machine, just pick a runtime and go. All dependencies are pre-built, versioned, and reproducible.
 
@@ -115,18 +115,6 @@ Want to add a new runtime? Here's how:
 
 See existing runtimes in the `runtimes/` directory for examples.
 
-## ⚙️ Configuration
-
-Point Joblet to this registry by adding to `~/.rnx/config.yaml`:
-
-```yaml
-runtimes:
-  registries:
-    - name: official
-      url: https://github.com/joblet/joblet-runtimes
-      enabled: true
-```
-
 ## 📚 Documentation
 
 **New to runtimes?** Check out our comprehensive guides:
@@ -138,19 +126,10 @@ runtimes:
 
 ## 🎁 Available Runtimes
 
-| Runtime                    | Latest Version | Description                                                 |
-|----------------------------|----------------|-------------------------------------------------------------|
-| `python-3.11`              | 1.3.1          | Basic Python 3.11 runtime                                   |
-| `python-3.11-ml`           | 1.3.1          | Python 3.11 with ML libraries (NumPy, Pandas, Scikit-learn) |
-| `python-3.11-pytorch-cuda` | 1.3.1          | PyTorch 2.1.0 + CUDA 11.8 for GPU deep learning             |
-| `openjdk-21`               | 1.3.1          | OpenJDK 21 LTS with development tools                       |
-| `graalvmjdk-21`            | 1.3.1          | GraalVM CE 21 with native-image for AOT compilation         |
-
 See [registry.json](registry.json) for all available versions.
 
 ## ℹ️ Project Info
 
-- 👤 **Maintainer:** Jay Ehsaniara
 - 📄 **License:** MIT
 - 🚀 **Main Project:** [Joblet](https://github.com/joblet/joblet) - Distributed job execution with cgroups isolation
 - 📚 **Documentation:** [docs/](docs/) - Comprehensive guides and references
