@@ -1,5 +1,5 @@
 # Joblet Runtime: python-3.11
-# For use with Joblet - https://github.com/joblet/joblet
+# For use with Joblet - https://github.com/ehsaniara/joblet
 
 name: python-3.11
 version: 1.3.1

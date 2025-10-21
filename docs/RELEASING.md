@@ -360,11 +360,11 @@ git push origin main
 
 Check that your tag matches the pattern:
 
-✅ `python-3.11-ml@1.3.2` - Correct
-✅ `openjdk-21@2.0.0` - Correct
-❌ `v1.3.2` - Wrong (triggers bulk release)
-❌ `python-3.11-ml-1.3.2` - Wrong (use @ not -)
-❌ `python@1.3.2` - Wrong (no runtime named "python")
+- ✅ `python-3.11-ml@1.3.2` - Correct
+- ✅ `openjdk-21@2.0.0` - Correct
+- ❌ `v1.3.2` - Wrong (triggers bulk release)
+- ❌ `python-3.11-ml-1.3.2` - Wrong (use @ not -)
+- ❌ `python@1.3.2` - Wrong (no runtime named "python")
 
 ### 👀 Check Workflow Status
 

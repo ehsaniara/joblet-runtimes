@@ -1,6 +1,7 @@
 # 📦 Joblet Runtime Registry
 
-Pre-built runtime environments for [Joblet](https://github.com/joblet/joblet) - so you can run jobs with **exactly** the dependencies you need, every time.
+Pre-built runtime environments for [Joblet](https://github.com/ehsaniara/joblet) - so you can run jobs with **exactly**
+the dependencies you need, every time.
 
 ## 🎯 Why This Exists
 
@@ -12,11 +13,9 @@ Running distributed jobs is tricky when different jobs need different library ve
 
 Instead of managing dependencies manually on each machine, just pick a runtime and go. All dependencies are pre-built, versioned, and reproducible.
 
-Want another runtime? [Create one](#adding-a-runtime) - it's just a manifest file and setup scripts.
-
 ## 🚀 Quick Start
 
-**Prerequisites:** You need [Joblet](https://github.com/joblet/joblet) installed with the `rnx` CLI.
+**Prerequisites:** You need [Joblet](https://github.com/ehsaniara/joblet) installed with the `rnx` CLI.
 
 ### 📥 Installing Runtimes
 
@@ -82,7 +81,7 @@ Want to add a new runtime? Here's how:
 2. **Add `manifest.yaml`:**
    ```yaml
    # Joblet Runtime: my-runtime
-   # For use with Joblet - https://github.com/joblet/joblet
+   # For use with Joblet - https://github.com/ehsaniara/joblet
 
    name: my-runtime
    version: 1.0.0  # Auto-updated by CI/CD from git tag
@@ -124,13 +123,12 @@ See existing runtimes in the `runtimes/` directory for examples.
 - **[Releasing Runtimes](docs/RELEASING.md)** - How to release individual or bulk runtime updates
 - **[Docs Index](docs/README.md)** - Full documentation index with quick reference
 
-## 🎁 Available Runtimes
 
 See [registry.json](registry.json) for all available versions.
 
 ## ℹ️ Project Info
 
 - 📄 **License:** MIT
-- 🚀 **Main Project:** [Joblet](https://github.com/joblet/joblet) - Distributed job execution with cgroups isolation
+- 🚀 **Main Project:** [Joblet](https://github.com/ehsaniara/joblet) - Distributed job execution with cgroups isolation
 - 📚 **Documentation:** [docs/](docs/) - Comprehensive guides and references
 

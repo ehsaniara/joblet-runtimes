@@ -218,7 +218,7 @@ jobs:
             - `openjdk-21@${{ steps.get_version.outputs.version }}` - OpenJDK 21 LTS
             - `graalvmjdk-21@${{ steps.get_version.outputs.version }}` - GraalVM + native-image
 
-            See [registry.json](https://github.com/joblet/joblet-runtimes/blob/main/registry.json) for checksums and download URLs.
+            See [registry.json](https://github.com/ehsaniara/joblet-runtimes/blob/main/registry.json) for checksums and download URLs.
           draft: false
           prerelease: false
         env:

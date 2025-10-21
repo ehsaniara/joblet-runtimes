@@ -1,5 +1,5 @@
 # Joblet Runtime: openjdk-21
-# For use with Joblet - https://github.com/joblet/joblet
+# For use with Joblet - https://github.com/ehsaniara/joblet
 
 name: openjdk-21
 version: 1.3.1
