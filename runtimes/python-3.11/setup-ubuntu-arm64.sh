@@ -130,7 +130,7 @@ echo "✓ Python installation completed"
 echo "Installing basic Python packages..."
 
 # Install basic packages in system first
-basic_packages=("requests" "urllib3" "certifi" "charset-normalizer" "idna")
+basic_packages=("requests" "urllib3" "certifi" "charset-normalizer" "chardet" "idna")
 
 for package in "${basic_packages[@]}"; do
     echo "Installing $package..."
@@ -144,7 +144,7 @@ mkdir -p "$site_packages"
 echo "Copying packages to isolated environment..."
 for search_path in /usr/local/lib/python*/dist-packages /usr/local/lib/python*/site-packages /usr/lib/python*/dist-packages /usr/lib/python*/site-packages ~/.local/lib/python*/site-packages; do
     if [ -d "$search_path" ]; then
-        for pkg_pattern in requests* urllib3* certifi* charset* idna* six* packaging* setuptools* wheel*; do
+        for pkg_pattern in requests* urllib3* certifi* charset* chardet* idna* six* packaging* setuptools* wheel*; do
             for pkg_dir in "$search_path"/$pkg_pattern; do
                 if [ -d "$pkg_dir" ]; then
                     pkg_name=$(basename "$pkg_dir")
