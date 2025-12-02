@@ -251,6 +251,24 @@ install_python() {
     [ -f pip3 ] && ln -sf pip3 pip 2>/dev/null || true
     cd - >/dev/null
 
+    # Ensure pip is available (don't assume host has pip)
+    echo "Ensuring pip is available..."
+    if ! python3 -m pip --version >/dev/null 2>&1; then
+        echo "  pip not found, installing via get-pip.py..."
+        if ! curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py; then
+            echo "  ❌ Failed to download get-pip.py - check network/DNS"
+            exit 1
+        fi
+        if ! python3 /tmp/get-pip.py --break-system-packages; then
+            echo "  ❌ Failed to install pip"
+            exit 1
+        fi
+        rm -f /tmp/get-pip.py
+        echo "  ✓ pip installed via get-pip.py"
+    else
+        echo "  ✓ pip already available"
+    fi
+
     echo "✓ Python environment ready"
 }
 
@@ -310,7 +328,7 @@ PIPCONF
 
     # Update pip first (with verbose output)
     echo "Updating pip..."
-    python3 -m pip install --upgrade pip 2>&1 | grep -v "^Requirement already satisfied" || echo "  ⚠ Could not upgrade pip"
+    python3 -m pip install --upgrade pip --break-system-packages 2>&1 | grep -v "^Requirement already satisfied" || echo "  ⚠ Could not upgrade pip"
 
     local installed_packages=()
     local failed_packages=()
@@ -328,6 +346,7 @@ PIPCONF
     if python3 -m pip install torch torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/cu118 \
         --no-cache-dir \
+        --break-system-packages \
         --timeout=300 \
         --retries=3 2>&1 | tee /tmp/pytorch_install.log; then
 
@@ -351,6 +370,7 @@ PIPCONF
         echo "Attempt 2: Installing PyTorch CPU version..."
         if python3 -m pip install torch torchvision torchaudio \
             --no-cache-dir \
+            --break-system-packages \
             --timeout=300 \
             --retries=3 2>&1; then
 
@@ -379,7 +399,7 @@ PIPCONF
     echo "========================================="
     for package in "${ml_packages[@]}"; do
         echo "Installing $package..."
-        if python3 -m pip install "$package" --no-cache-dir --timeout=180 2>&1 | grep -E "(Successfully installed|Requirement already satisfied)"; then
+        if python3 -m pip install "$package" --no-cache-dir --break-system-packages --timeout=180 2>&1 | grep -E "(Successfully installed|Requirement already satisfied)"; then
             # Verify package can be imported
             local pkg_import="${package}"
             # Handle special import names
@@ -707,8 +727,6 @@ install_python() {
 # =============================================================================
 # PYTORCH AND CUDA PACKAGES
 # =============================================================================
-
-}
 
 # =============================================================================
 # CONFIGURATION FILES
