@@ -68,14 +68,33 @@ if command -v python3 >/dev/null 2>&1; then
     cp "$(which python3)" "$ISOLATED_DIR/usr/bin/python3.11" 2>/dev/null || true
 fi
 
+# Create symlinks
+cd "$ISOLATED_DIR/usr/bin"
+ln -sf python3.11 python 2>/dev/null || true
+
+# Ensure pip is available (don't assume host has pip)
+echo "Ensuring pip is available..."
+if ! python3 -m pip --version >/dev/null 2>&1; then
+    echo "  pip not found, installing via get-pip.py..."
+    if ! curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py; then
+        echo "  ❌ Failed to download get-pip.py - check network/DNS"
+        exit 1
+    fi
+    if ! python3 /tmp/get-pip.py --break-system-packages; then
+        echo "  ❌ Failed to install pip"
+        exit 1
+    fi
+    rm -f /tmp/get-pip.py
+    echo "  ✓ pip installed via get-pip.py"
+else
+    echo "  ✓ pip already available"
+fi
+
+# Copy pip to isolated environment if it exists
 if command -v pip3 >/dev/null 2>&1; then
     cp "$(which pip3)" "$ISOLATED_DIR/usr/bin/" 2>/dev/null || true
     cp "$(which pip3)" "$ISOLATED_DIR/usr/bin/pip3.11" 2>/dev/null || true
 fi
-
-# Create symlinks
-cd "$ISOLATED_DIR/usr/bin"
-ln -sf python3.11 python 2>/dev/null || true
 ln -sf pip3.11 pip 2>/dev/null || true
 
 # Copy Python standard library
@@ -108,7 +127,7 @@ basic_packages=("requests" "urllib3" "certifi" "charset-normalizer" "idna")
 
 for package in "${basic_packages[@]}"; do
     echo "Installing $package..."
-    python3 -m pip install "$package" --quiet 2>/dev/null || echo "  ⚠ Failed to install $package"
+    python3 -m pip install "$package" --break-system-packages --quiet 2>/dev/null || echo "  ⚠ Failed to install $package"
 done
 
 # Copy packages to isolated environment
