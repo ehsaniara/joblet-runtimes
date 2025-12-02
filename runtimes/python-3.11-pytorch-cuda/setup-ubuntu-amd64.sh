@@ -198,19 +198,25 @@ install_cuda() {
 install_python() {
     echo "Setting up Python environment..."
 
-    # Install Python packages in chroot environment
-    if [ "${JOBLET_CHROOT:-false}" = "true" ] && command -v apt-get >/dev/null 2>&1; then
-        echo "Installing Python packages in chroot environment..."
-        export DEBIAN_FRONTEND=noninteractive
-        if ! apt-get update -qq 2>/dev/null; then
-            echo "⚠ apt-get update failed, but continuing with existing package cache"
+    # Ensure pip is available
+    # Network is required anyway for installing PyTorch/ML packages
+    echo "Ensuring pip is available..."
+    if ! python3 -m pip --version >/dev/null 2>&1; then
+        echo "  pip not found, installing via get-pip.py..."
+        if ! curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py; then
+            echo "  ❌ Failed to download get-pip.py - check network/DNS"
+            echo "  DNS config: $(cat /etc/resolv.conf 2>/dev/null | head -3)"
+            exit 1
         fi
-        if ! apt-get install -y python3 python3-dev python3-venv python3-pip python3-setuptools python3-wheel \
-                          build-essential libopenblas-dev liblapack-dev libffi-dev 2>/dev/null; then
-            echo "⚠ Some Python packages failed to install in chroot, but this is non-critical"
+        if ! python3 /tmp/get-pip.py; then
+            echo "  ❌ Failed to install pip"
+            rm -f /tmp/get-pip.py
+            exit 1
         fi
+        rm -f /tmp/get-pip.py
+        echo "  ✓ pip installed via get-pip.py"
     else
-        echo "Not in chroot or apt not available - copying existing Python from host"
+        echo "  ✓ pip is available"
     fi
 
     # Copy Python runtime
