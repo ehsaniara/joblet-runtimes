@@ -175,19 +175,27 @@ copy_system_files() {
 install_python() {
     echo "Setting up Python environment..."
 
-    # Install Python packages in chroot environment
-    if [ "${JOBLET_CHROOT:-false}" = "true" ] && command -v apt-get >/dev/null 2>&1; then
-        echo "Installing Python packages in chroot environment..."
-        export DEBIAN_FRONTEND=noninteractive
-        if ! apt-get update -qq 2>/dev/null; then
-            echo "⚠ apt-get update failed, but continuing with existing package cache"
+    # Ensure pip is available
+    # Network is required anyway for installing PyTorch/ML packages
+    # Note: --break-system-packages is safe here - we're in a chroot with tmpfs /usr/local
+    echo "Ensuring pip is available..."
+    if ! python3 -m pip --version >/dev/null 2>&1; then
+        echo "  pip not found, installing via get-pip.py..."
+        if ! curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py; then
+            echo "  ❌ Failed to download get-pip.py - check network/DNS"
+            echo "  DNS config: $(cat /etc/resolv.conf 2>/dev/null | head -3)"
+            exit 1
         fi
-        if ! apt-get install -y python3 python3-dev python3-venv python3-pip python3-setuptools python3-wheel \
-                          build-essential libopenblas-dev liblapack-dev libffi-dev 2>/dev/null; then
-            echo "⚠ Some Python packages failed to install in chroot, but this is non-critical"
+        # Use --break-system-packages for PEP 668 compliant systems (Ubuntu 24.04+, Debian 12+)
+        if ! python3 /tmp/get-pip.py --break-system-packages; then
+            echo "  ❌ Failed to install pip"
+            rm -f /tmp/get-pip.py
+            exit 1
         fi
+        rm -f /tmp/get-pip.py
+        echo "  ✓ pip installed via get-pip.py"
     else
-        echo "Not in chroot or apt not available - copying existing Python from host"
+        echo "  ✓ pip is available"
     fi
 
     # Copy Python runtime
@@ -275,8 +283,9 @@ trusted-host = pypi.org
 PIPCONF
 
     # Update pip first
+    # Use --break-system-packages for PEP 668 compliant systems (Ubuntu 24.04+, Debian 12+)
     echo "Updating pip..."
-    python3 -m pip install --upgrade pip 2>&1 | grep -v "^Requirement already satisfied" || echo "  ⚠ Could not upgrade pip"
+    python3 -m pip install --upgrade pip --break-system-packages 2>&1 | grep -v "^Requirement already satisfied" || echo "  ⚠ Could not upgrade pip"
 
     local installed_packages=()
     local failed_packages=()
@@ -298,6 +307,7 @@ PIPCONF
         # Try standard PyTorch first (may work on newer Jetson with JetPack 5+)
         if python3 -m pip install torch torchvision torchaudio \
             --no-cache-dir \
+            --break-system-packages \
             --timeout=300 \
             --retries=3 2>&1; then
             if python3 -c "import torch; print('PyTorch version:', torch.__version__)" 2>/dev/null; then
@@ -313,6 +323,7 @@ PIPCONF
 
         if python3 -m pip install torch torchvision torchaudio \
             --no-cache-dir \
+            --break-system-packages \
             --timeout=300 \
             --retries=3 2>&1; then
             if python3 -c "import torch; print('PyTorch version:', torch.__version__)" 2>/dev/null; then
@@ -340,7 +351,7 @@ PIPCONF
     echo "========================================="
     for package in "${ml_packages[@]}"; do
         echo "Installing $package..."
-        if python3 -m pip install "$package" --no-cache-dir --timeout=180 2>&1 | grep -E "(Successfully installed|Requirement already satisfied)"; then
+        if python3 -m pip install "$package" --no-cache-dir --break-system-packages --timeout=180 2>&1 | grep -E "(Successfully installed|Requirement already satisfied)"; then
             # Verify package can be imported
             local pkg_import="${package}"
             # Handle special import names
