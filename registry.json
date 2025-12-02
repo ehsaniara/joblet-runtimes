@@ -3,7 +3,7 @@
   "_generated_by": "GitHub Actions on runtime-specific tag push",
   "_workflow": ".github/workflows/release-runtime.yml",
   "version": "1",
-  "updated_at": "2025-10-21T00:01:24Z",
+  "updated_at": "2025-12-02T03:05:06Z",
   "runtimes": {
     "graalvmjdk-21": {
       "1.3.1": {
@@ -95,6 +95,21 @@
         "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/python-3.11-pytorch-cuda@1.3.2/python-3.11-pytorch-cuda-1.3.2.tar.gz",
         "checksum": "sha256:929b26b117232c389d00cca58d583afaf7faaf5e2815610304a6696e8554bad2",
         "size": 17066,
+        "platforms": [
+          "ubuntu-amd64",
+          "ubuntu-arm64",
+          "rhel-amd64",
+          "rhel-arm64",
+          "amzn-amd64",
+          "amzn-arm64"
+        ]
+      },
+      "1.3.3": {
+        "version": "1.3.3",
+        "description": "PyTorch with CUDA 11.8 for GPU deep learning",
+        "download_url": "https://github.com/ehsaniara/joblet-runtimes/releases/download/python-3.11-pytorch-cuda@1.3.3/python-3.11-pytorch-cuda-1.3.3.tar.gz",
+        "checksum": "sha256:201766658c9b1716eb74d771c50eff1b615fca2dc02fa1eebe93ecc4812e9d45",
+        "size": 15974,
         "platforms": [
           "ubuntu-amd64",
           "ubuntu-arm64",

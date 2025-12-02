@@ -3,18 +3,18 @@
 # This file captures the EXACT versions installed during build
 #
 # Runtime: python-3.11-pytorch-cuda
-# Generated: 2025-10-21 00:01:18 UTC
+# Generated: 2025-12-02 03:05:02 UTC
 # Build Platform: Linux x86_64
 
 metadata:
   runtime: python-3.11-pytorch-cuda
-  generated: 2025-10-21T00:01:18Z
+  generated: 2025-12-02T03:05:02Z
   build_platform: Linux-x86_64
 
 # Python packages with exact versions
 python_packages:
   - name: argcomplete
-    version: "=3.6.2"
+    version: "=3.6.3"
   - name: attrs
     version: "=23.2.0"
   - name: Automat
@@ -98,9 +98,9 @@ python_packages:
   - name: pexpect
     version: "=4.9.0"
   - name: pipx
-    version: "=1.7.1"
+    version: "=1.8.0"
   - name: platformdirs
-    version: "=4.4.0"
+    version: "=4.5.0"
   - name: ptyprocess
     version: "=0.7.0"
   - name: pyasn1
