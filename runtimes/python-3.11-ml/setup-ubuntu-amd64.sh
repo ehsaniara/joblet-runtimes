@@ -218,7 +218,25 @@ install_python() {
     [ -f python3 ] && [ ! -f python ] && ln -sf python3 python 2>/dev/null || true
     [ -f pip3 ] && ln -sf pip3 pip 2>/dev/null || true
     cd - >/dev/null
-    
+
+    # Ensure pip is available (don't assume host has pip)
+    echo "Ensuring pip is available..."
+    if ! python3 -m pip --version >/dev/null 2>&1; then
+        echo "  pip not found, installing via get-pip.py..."
+        if ! curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py; then
+            echo "  ❌ Failed to download get-pip.py - check network/DNS"
+            exit 1
+        fi
+        if ! python3 /tmp/get-pip.py --break-system-packages; then
+            echo "  ❌ Failed to install pip"
+            exit 1
+        fi
+        rm -f /tmp/get-pip.py
+        echo "  ✓ pip installed via get-pip.py"
+    else
+        echo "  ✓ pip already available"
+    fi
+
     echo "✓ Python environment ready"
 }
 
@@ -242,11 +260,11 @@ install_ml_packages() {
     local failed_packages=()
 
     # Update pip first
-    python3 -m pip install --upgrade pip --quiet 2>/dev/null || echo "  ⚠ Could not upgrade pip"
+    python3 -m pip install --upgrade pip --break-system-packages --quiet 2>/dev/null || echo "  ⚠ Could not upgrade pip"
 
     for package in "${ml_packages[@]}"; do
         echo "Installing $package..."
-        if python3 -m pip install "$package" --quiet 2>/dev/null; then
+        if python3 -m pip install "$package" --break-system-packages --quiet 2>/dev/null; then
             installed_packages+=("$package")
             echo "  ✓ $package installed in system"
         else
